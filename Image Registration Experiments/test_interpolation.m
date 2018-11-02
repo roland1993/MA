@@ -8,7 +8,7 @@ h = [1, 1];
 X = randi(256, m, n) - 1;
 
 %% display image data
-figure;
+figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
 hold on;
 image(...
@@ -16,6 +16,7 @@ image(...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
     'CData', flipud(X));
 axis xy;
+axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
@@ -23,7 +24,7 @@ ylabel('---y-->');
 % plot cell centered grid
 [x, y] = cell_centered_grid([m, n], h);
 p = [x(:), y(:)];
-plot(p(:, 1), p(:, 2), 'r+');
+plot_grid(reshape(p, [m, n, 2]));
 title('image X with cell centered grid');
 
 %% interpolate X over cell centered grid (... should yield X)
@@ -37,7 +38,7 @@ p_displaced = p + u;
 X_u = evaluate_displacement(X, h, u);
 
 % display results
-figure;
+figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
 
 subplot(1, 2, 1);
@@ -47,10 +48,11 @@ image(...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
     'CData', flipud(X));
 axis xy;
+axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
-plot(p_displaced(:, 1), p_displaced(:, 2), 'r+');
+plot_grid(reshape(p_displaced, [m, n, 2]));
 title('image X with displaced grid');
 
 subplot(1, 2, 2);
@@ -59,6 +61,7 @@ image(...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
     'CData', flipud(X_u));
 axis xy;
+axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');

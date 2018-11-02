@@ -44,11 +44,12 @@ f = @(u) objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u);
 
 % set optimization parameters
 u0 = zeros(m * n * 2, 1);
-tol = 1e-1;
+tol1 = 1e-1;
 maxIter = 500;
+tol2 = 1e-3;
 
 % perform optimization and evaluate result
-u_star = gradient_descent(f, u0, tol, maxIter);
+u_star = gradient_descent(f, u0, tol1, maxIter, tol2);
 u_star = reshape(u_star, [m*n, 2]);
 T_u_star = evaluate_displacement(T, h, u_star);
 
@@ -72,7 +73,7 @@ axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
-plot_grid(g);
+plot_grid(g, 2);
 title('template T with displaced grid')
 
 subplot(1, 2, 2);
