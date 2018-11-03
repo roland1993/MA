@@ -16,7 +16,7 @@ else
 end
 
 % compute SSD
-f = 0.5 * sum((T_u(:) - R(:)) .^ 2);
+f = 0.5 * prod(h) * sum((T_u(:) - R(:)) .^ 2);
 
 % compute gradient df/du
 if nargout == 2
@@ -26,7 +26,7 @@ if nargout == 2
     
     % gradient of inner function (T(u) - R) is dT_u
     %   -> df = dphi * dT_u
-    df = dphi .* dT_u;
+    df = prod(h) * dphi .* dT_u;
     
     % reshape df to
     %   [df/du_11_x, .., df/du_mn_x, df/du_11_y, .., df/du_mn_y]'

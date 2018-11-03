@@ -22,11 +22,11 @@ L = kron(D_xx, speye(m)) + kron(speye(n), D_yy);
 % compute curvature energy 0.5 * [ux' * L' * L * ux + uy' * L' * L * uy]
 L_u_x = L * u(:, 1);
 L_u_y = L * u(:, 2);
-f = 0.5 * (L_u_x' * L_u_x + L_u_y' * L_u_y);
+f = 0.5 * prod(h) * (L_u_x' * L_u_x + L_u_y' * L_u_y);
 
 % compute df/du as [L' 0; 0 L'] * [L 0; 0 L] * [ux; uy]
 if nargout == 2
-    df = [L * L_u_x; L * L_u_y];
+    df = prod(h) * [L * L_u_x; L * L_u_y];
 end
 
 end

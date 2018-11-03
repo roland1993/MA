@@ -1,8 +1,8 @@
 %% initialization
 clear all, close all, clc;
 
-R = double(imread('rect1.png'));
-T = double(imread('rect2.png'));
+R = double(imread('hand1.png'));
+T = double(imread('hand2.png'));
 [m, n] = size(R);
 h = [1, 1];
 
@@ -39,7 +39,7 @@ title('template T');
 % set function handles for data term, regularizer and final objective
 dist_fctn = @(T, R, h, u) SSD(T, R, h, u);
 reg_fctn = @(u, s, h) diffusive_energy(u, s, h);
-lambda = 5e2;
+lambda = 5e3;
 f = @(u) objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u);
 
 % set optimization parameters
@@ -72,7 +72,7 @@ axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
-plot_grid(g, 2);
+plot_grid(g);
 title('template T with displaced grid')
 
 subplot(1, 2, 2);
