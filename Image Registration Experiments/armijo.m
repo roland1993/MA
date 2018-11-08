@@ -10,11 +10,9 @@ function alpha = armijo(f, x, dir, alpha0, beta, tau)
 %   alpha   ~ 1 x 1                 step size
 
 % set parameters to standard values if not specified
-if (nargin <= 3)
-    alpha0 = 1;
-    beta = 0.01;
-    tau = 0.5;
-end
+if nargin < 6, tau = 0.5; end
+if nargin < 5, beta = 0.01; end
+if nargin < 4, alpha0 = 1; end
 
 % evaluate f and grad_f at x
 alpha = alpha0;
