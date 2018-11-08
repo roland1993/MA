@@ -10,6 +10,11 @@ First simple experiments for non-parametric image registration, written in **MAT
   + Diffusive Energy
   + Curvature Energy
 
-+ ### Optimization scheme
-  + Gradient descent with Armijo line search
++ ### Optimization schemes
+  + Gradient descent
+  + Gauß-Newton optimization
+  + Armijo line search
   + Support for Multi-Level startegy
+
++ ### Miscellaneous
+  + Derivative test (1st + 2nd order) for multivariate functions
