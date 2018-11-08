@@ -12,6 +12,7 @@ function [f, df, d2f] = diffusive_energy(u, s, h)
 u = reshape(u, [], 2);
 
 persistent G;
+persistent GG;
 
 % compute operator G only once
 if isempty(G) || size(G, 2) ~= numel(u)
@@ -35,7 +36,10 @@ if nargout >= 2
     df = prod(h) * G' * g_u;
 end
 if nargout == 3
-    d2f = prod(h) * (G' * G);
+    if isempty(GG) || size(GG, 2) ~= numel(u)
+        GG = prod(h) * (G' * G);
+    end
+    d2f = GG;
 end
 
 end

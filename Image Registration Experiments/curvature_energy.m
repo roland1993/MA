@@ -12,6 +12,7 @@ function [f, df, d2f] = curvature_energy(u, s, h)
 u = reshape(u,[],2);
 
 persistent L;
+persistent LL;
 
 % compute discrete Laplace L only once (for every resolution level)
 if isempty(L) || size(L, 2) ~= numel(u)
@@ -59,7 +60,10 @@ if nargout >= 2
     df = prod(h) * L' * l_u;
 end
 if nargout == 3
-    d2f = prod(h) * (L' * L);
+    if isempty(LL) || size(LL, 2) ~= numel(u)
+        LL = prod(h) * (L' * L);
+    end
+    d2f = LL;
 end
 
 end
