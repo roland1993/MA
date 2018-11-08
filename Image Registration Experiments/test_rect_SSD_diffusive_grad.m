@@ -10,7 +10,7 @@ h = [1, 1];
 figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
 
-subplot(1, 2, 1);
+subplot(2, 2, 1);
 image(...
     'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
@@ -22,7 +22,7 @@ xlabel('---x-->');
 ylabel('---y-->');
 title('reference R');
 
-subplot(1, 2, 2);
+subplot(2, 2, 2);
 image(...
     'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
@@ -39,7 +39,7 @@ title('template T');
 % set function handles for data term, regularizer and final objective
 dist_fctn = @(T, R, h, u) SSD(T, R, h, u);
 reg_fctn = @(u, s, h) diffusive_energy(u, s, h);
-lambda = 1e4;
+lambda = 5e3;
 f = @(u) objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u);
 
 % set optimization parameters
@@ -59,10 +59,8 @@ g = [cc_x(:), cc_y(:)] + u_star;
 g = reshape(g, [m, n, 2]);
 
 %% display results
-figure('units', 'normalized', 'outerposition', [0 0 1 1]);
-colormap gray(256);
 
-subplot(1, 2, 1);
+subplot(2, 2, 3);
 image(...
     'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
@@ -75,7 +73,7 @@ ylabel('---y-->');
 plot_grid(g);
 title('template T with displaced grid')
 
-subplot(1, 2, 2);
+subplot(2, 2, 4);
 image(...
     'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
     'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
