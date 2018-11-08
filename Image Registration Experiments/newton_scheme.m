@@ -87,7 +87,7 @@ elseif (norm(df_cur) <= tol1)
     fprintf('\t||grad(f)(x_i)|| = %.2e <= %.1e\n', norm(df_cur), tol1);
 else
     fprintf('\tDECREASE OVER LAST 3 ITERATES = %.1e <= %.1e\n', ...
-        (1 - (f_history(i + 1) / f_history(i - 4))), tol2);
+        (1 - (f_history(i + 1) / f_history(i - 2))), tol2);
 end
 fprintf('\nREMAINDER OF INITIAL TARGET\n\n');
 fprintf('\tf(x_star)/f(x_0) = %.4e\n\n', ...
