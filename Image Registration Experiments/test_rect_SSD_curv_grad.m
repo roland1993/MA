@@ -35,11 +35,10 @@ ylabel('---y-->');
 title('template T');
 
 %% registration procedure
-
 % set function handles for data term, regularizer and final objective
 dist_fctn = @(T, R, h, u) SSD(T, R, h, u);
 reg_fctn = @(u, s, h) curvature_energy(u, s, h);
-lambda = 1e2;
+lambda = 1e4;
 f = @(u) objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u);
 
 % set optimization parameters
@@ -72,7 +71,7 @@ axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
-plot_grid(g, 2);
+plot_grid(g);
 title('template T with displaced grid')
 
 subplot(1, 2, 2);
