@@ -1,31 +1,41 @@
-function [f, df] = diffusive_energy(u, s, h)
+function [f, df, d2f] = diffusive_energy(u, s, h)
 % IN:
-%   u   ~ (m*n) x 2         displacement field to regularize
-%   s   ~ 2 x 1             s = [m, n]
-%   h   ~ 2 x 1             grid width
+%   u   ~ (m*n) x 2             displacement field to regularize
+%   s   ~ 2 x 1                 s = [m, n]
+%   h   ~ 2 x 1                 grid width
 % OUT:
-%   f   ~ 1 x 1             diffusive energy of u
-%   df  ~ (m*n*2) x 1       derivative of diffusive energy (by u)
+%   f   ~ 1 x 1                 diffusive energy of u
+%   df  ~ (m*n*2) x 1           gradient of diffusive energy w.r.t. u
+%   d2f ~ (m*n*2) x (m*n*2)     Hessian of diffusive energy w.r.t u
 
-m = s(1);   n = s(2);
+% make sure u has the right format...
+u = reshape(u, [], 2);
 
-% get gradient operators for x and y-direction
-[~, ~, G_x, G_y] = image_gradient(zeros(m, n), h);
+persistent G;
 
-% apply gradient operators to u_x and u_y
-u_x_x = G_x * u(:, 1);
-u_x_y = G_y * u(:, 1);
-u_y_x = G_x * u(:, 2);
-u_y_y = G_y * u(:, 2);
+% compute operator G only once
+if isempty(G) || size(G, 2) ~= numel(u)
+    
+    % get gradient operators for x and y-direction
+    [G_x, G_y] = gradient_operator(s, h);
+    
+    % form new gradient operator to operate on u(:)
+    G = kron(speye(2), [G_x; G_y]);
+    
+end
+
+% apply gradient operator u(:)
+g_u = G * u(:);
 
 % compute diffusiv energy for u
-f = 0.5 * prod(h) * (u_x_x' * u_x_x + u_x_y' * u_x_y + ...
-    u_y_x' * u_y_x + u_y_y' * u_y_y);
+f = 0.5 * prod(h) * (g_u' * g_u);
 
-% compute df/du
-if nargout == 2
-    G = kron(speye(2), [G_x; G_y]);
-    df = prod(h) * G' * [u_x_x; u_x_y; u_y_x; u_y_y];
+% compute df/du and d2f/du^2 if requested
+if nargout >= 2
+    df = prod(h) * G' * g_u;
+end
+if nargout == 3
+    d2f = prod(h) * (G' * G);
 end
 
 end
