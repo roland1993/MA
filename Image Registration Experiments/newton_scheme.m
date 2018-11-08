@@ -40,7 +40,7 @@ fprintf('\nNEWTON SCHEME ON %s\n\nSTOPPING CRITERIONS\n\n', ...
     func2str(f));
 fprintf('\tTOLERANCE ||grad(f)(x)|| <= %.1e\n', tol1);
 fprintf('\tMAXITER = %d\n', maxIter);
-fprintf('\tDECREASE OVER 5 ITERATES <= %.1e\n\n', tol2);
+fprintf('\tDECREASE OVER 3 ITERATES <= %.1e\n\n', tol2);
 fprintf('i \t ||grad(f)(x_i)|| \t f(x_i)/f(x_i-1)\n');
 fprintf('------------------------------------------------\n');
 
@@ -86,7 +86,7 @@ if (i == maxIter)
 elseif (norm(df_cur) <= tol1)
     fprintf('\t||grad(f)(x_i)|| = %.2e <= %.1e\n', norm(df_cur), tol1);
 else
-    fprintf('\tDECREASE OVER LAST 5 ITERATES = %.1e <= %.1e\n', ...
+    fprintf('\tDECREASE OVER LAST 3 ITERATES = %.1e <= %.1e\n', ...
         (1 - (f_history(i + 1) / f_history(i - 4))), tol2);
 end
 fprintf('\nREMAINDER OF INITIAL TARGET\n\n');
