@@ -7,7 +7,7 @@ x0 = [-1.5; 1.5];
 tol1 = 1e-3;
 maxIter = 1000;
 
-[x_star, ~, x_history] = gradient_descent(f, x0, tol1, maxIter);
+[x_star, x_history] = gradient_descent(f, x0, tol1, maxIter);
 
 %% display results
 figure('units', 'normalized', 'outerposition', [0 0 1 1]);
