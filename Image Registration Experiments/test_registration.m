@@ -1,8 +1,19 @@
-%% initialization
+%% choose data / regularizer / optimization scheme
 clear all, close all, clc;
 
-R = double(imread('rect1.png'));
-T = double(imread('rect2.png'));
+% 1. choose data from {'rect', 'hand'}
+data = 'rect';
+
+% 2. choose regularizer from {'diffusive', 'curvature'}
+regularizer = 'curvature';
+
+% 3. choose optimizer from {'gradient_descent', 'newton'}
+optimizer = 'newton';
+
+%% initialization
+
+R = double(imread(sprintf('%s1.png', data)));
+T = double(imread(sprintf('%s2.png', data)));
 [m, n] = size(R);
 h = [1, 1];
 
@@ -35,20 +46,28 @@ ylabel('---y-->');
 title('template T');
 
 %% registration procedure
+
 % set function handles for data term, regularizer and final objective
 dist_fctn = @(T, R, h, u) SSD(T, R, h, u);
-reg_fctn = @(u, s, h) curvature_energy(u, s, h);
-lambda = 1e4;
+
+if strcmp(regularizer, 'curvature')
+    reg_fctn = @(u, s, h) curvature_energy(u, s, h);
+elseif strcmp(regularizer, 'diffusive')
+    reg_fctn = @(u, s, h) diffusive_energy(u, s, h);
+end
+
+lambda = 2e4;
 f = @(u) objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u);
 
-% set optimization parameters
+% optimization procedure
 u0 = zeros(m * n * 2, 1);
-tol1 = 1e-1;
-maxIter = 500;
-tol2 = 1e-3;
+if strcmp(optimizer, 'gradient_descent')
+    u_star = gradient_descent(f, u0);
+elseif strcmp(optimizer, 'newton')
+    u_star = newton_scheme(f, u0);
+end
 
-% perform optimization and evaluate result
-u_star = gradient_descent(f, u0, tol1, maxIter, tol2);
+% evaluate result
 u_star = reshape(u_star, [m*n, 2]);
 T_u_star = evaluate_displacement(T, h, u_star);
 
