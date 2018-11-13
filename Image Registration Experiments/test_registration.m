@@ -2,7 +2,7 @@
 clear all, close all, clc;
 
 % 1. choose data from {'rect', 'hand'}
-data = 'rect';
+data = 'hand';
 
 % 2. choose regularizer from {'diffusive', 'curvature'}
 regularizer = 'curvature';
@@ -12,8 +12,15 @@ optimizer = 'newton';
 
 %% initialization
 
-R = double(imread(sprintf('%s1.png', data)));
-T = double(imread(sprintf('%s2.png', data)));
+if strcmp(data, 'rect')
+    R = double(imread('rect1.png'));
+    T = double(imread('rect2.png'));
+elseif strcmp(data, 'hand')
+    check_hand_data;
+    R = double(imread('hands-R.jpg'));
+    T = double(imread('hands-T.jpg'));
+end
+
 [m, n] = size(R);
 h = [1, 1];
 
@@ -56,7 +63,7 @@ elseif strcmp(regularizer, 'diffusive')
     reg_fctn = @(u, s, h) diffusive_energy(u, s, h);
 end
 
-lambda = 2e4;
+lambda = 5e5;
 f = @(u) objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u);
 
 % optimization procedure
@@ -88,7 +95,7 @@ axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
-plot_grid(g);
+plot_grid(g, 4);
 title('template T with displaced grid')
 
 subplot(2, 2, 4);
