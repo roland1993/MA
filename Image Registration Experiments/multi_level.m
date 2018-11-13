@@ -13,7 +13,7 @@ function ML = multi_level(img, h)
 % filter kernel for averaging over 2x2 regions
 k = 0.25 * ones(2);
 
-% reduce resolution by factor 2 as long as (m >=16) && (n >= 16)
+% reduce resolution by factor 2 as long as (m >= 16) && (n >= 16)
 num_levels = min(floor(log2([m, n] / 16))) + 1;
 
 % initialize output as cell array

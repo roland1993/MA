@@ -16,7 +16,7 @@ p = [x(:), y(:)];
 % displace grid by u
 p_displaced = p + u;
 
-% interpolate X over resulting grid
+% interpolate img over resulting grid
 if nargout == 1
     img_u = bilinear_interpolation(img, h, p_displaced);
 elseif nargout == 2
