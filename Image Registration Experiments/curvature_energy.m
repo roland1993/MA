@@ -11,11 +11,10 @@ function [f, df, d2f] = curvature_energy(u, s, h)
 % make sure u has the right format...
 u = reshape(u,[],2);
 
-persistent L;
-persistent LL;
+persistent LtL_h;
 
 % compute discrete Laplace L only once (for every resolution level)
-if isempty(L) || size(L, 2) ~= numel(u)
+if isempty(LtL_h) || size(LtL_h, 2) ~= numel(u)
     
     m = s(1);   n = s(2);
     
@@ -45,25 +44,17 @@ if isempty(L) || size(L, 2) ~= numel(u)
             D_yy(end,end) = -3 / h(2)^2;
     end
     
-    %   iii) combine to form discrete Laplacian
+    %   iii) combine to form discrete Laplacian L
     L = kron(D_xx, speye(m)) + kron(speye(n), D_yy);
     L = kron(speye(2), L);
     
+    % pre-compute and save h(1)*h(2)*L'*L (necessary for computing output)
+    LtL_h = prod(h) * (L' * L);
+    
 end
 
-% compute curvature energy as (h1*h2)/2 * u(:)' * L' * L '* u(:)
-l_u = L * u(:);
-f = 0.5 * prod(h) * (l_u' * l_u);
-
-% compute df/du as (h1*h2) * L' * L * u(:), d2f/du^2 as (h1*h2) * L' * L
-if nargout >= 2
-    df = prod(h) * L' * l_u;
-end
-if nargout == 3
-    if isempty(LL) || size(LL, 2) ~= numel(u)
-        LL = prod(h) * (L' * L);
-    end
-    d2f = LL;
-end
+d2f = LtL_h;                % d2f = prod(h) * L' * L
+df = LtL_h * u(:);          % df  = prod(h) * L' * L * u
+f = 0.5 * u(:)' * df;       % f   = 0.5 * prod(h) * u' * L' * L * u
 
 end
