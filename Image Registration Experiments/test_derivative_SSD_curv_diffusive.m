@@ -1,8 +1,8 @@
 %% initialization
 clear all, close all, clc;
 
-R = double(imread('hand1.png'));
-T = double(imread('hand2.png'));
+R = double(imread('rect1.png'));
+T = double(imread('rect2.png'));
 h = [1, 1];
 s = size(R);
 
