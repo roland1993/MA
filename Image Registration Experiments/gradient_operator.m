@@ -1,35 +1,39 @@
-function [G_x, G_y] = gradient_operator(s, h)
+function [GXtGX, GYtGY] = gradient_operator(s, h)
 % IN:
-%   s   ~ m x n             grid size (assumed to be cell centered)
-%   h   ~ 2 x 1             grid width
+%   s   ~ m x n                 grid size (assumed to be cell centered)
+%   h   ~ 2 x 1                 grid width
 % OUT:
-%   G_x ~ (m*n) x (m*n)     x-gradient operator for X in column major
-%   G_y ~ (m*n) x (m*n)     y-gradient operator for X in column major
+%   GXtGX ~ (m*n) x (m*n)       u' * Gx' * Gx * u implements the sum of
+%                                   averaged squared finite x-differences
+%                                   (evaluated over x-staggered grid)
+%   GYtGY ~ (m*n) x (m*n)       u' * Gy' * Gy * u implements the sum of
+%                                   averaged squared finite y-differences
+%                                   (evaluated over y-staggered grid)
 
 m = s(1);   n = s(2);
 
-% switch from cell centered to staggered grid (x-direction / y-direction)
-% i) x-direction
+% 1. finite x-differences (evaluated over x-staggered grid)
 e = ones(n, 1);
-D = 0.5 * spdiags([e, e], -1 : 0, n + 1, n);
-S_x = kron(D, speye(m));
-% ii) y-direction
-e = ones(m, 1);
-D = 0.5 * spdiags([e, e], -1 : 0, m + 1, m);
-S_y = kron(speye(n), D);
+D = (1 / h(1)) * spdiags([-e, e], -1 : 0, n + 1, n);
+D(1, 1) = 0;    D(end, end) = 0;        % Neumann boundary condition
+Dx = kron(D, speye(m));
 
-% define differential operators
-% i) x-derivative
-e = ones(n, 1);
-D = (1 / h(1)) * spdiags([-e, e], 0 : 1, n, n + 1);
-D_x = kron(D, speye(m));
-% ii) y-derivative
+% 2. finite y-differences (evaluated over y-staggered grid)
 e = ones(m, 1);
-D = (1 / h(2)) * spdiags([e, - e], 0 : 1, m, m + 1);
-D_y = kron(speye(n), D);
+D = (1 / h(2)) * spdiags([e, -e], -1 : 0, m + 1, m);
+D(1, 1) = 0;    D(end, end) = 0;        % Neumann boundary condition
+Dy = kron(speye(n), D);
 
-% calculate x-derivative and y-derivative of input image
-G_x = D_x * S_x;
-G_y = D_y * S_y;
+% 3. averaging in x-direction
+ax = [1/2; ones(n - 1, 1); 1/2];
+Ax = spdiags(kron(ax, ones(m, 1)), 0, (n + 1) * m, (n + 1) * m);
+
+% 4. averaging in y-direction
+ay = [1/2; ones(m - 1, 1); 1/2];
+Ay = spdiags(kron(ones(n, 1), ay), 0, n * (m + 1), n * (m + 1));
+
+% combine to form output
+GXtGX = Dx' * Ax * Dx;
+GYtGY = Dy' * Ay * Dy;
 
 end
