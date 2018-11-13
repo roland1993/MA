@@ -10,21 +10,18 @@ img = randi(256, m, n) - 1;
 %% display image data
 figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
-hold on;
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(img));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', img);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 
 % plot cell centered grid
 [x, y] = cell_centered_grid([m, n], h);
 p = [x(:), y(:)];
-plot_grid(reshape(p, [m, n, 2]));
+plot_grid(reshape(p, [m, n, 2]), 1, 'g--o');
 title('image img with cell centered grid');
 
 %% interpolate img over cell centered grid (... should yield img)
@@ -42,27 +39,24 @@ figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
 
 subplot(1, 2, 1);
-hold on;
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(img));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', img);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 plot_grid(reshape(p_displaced, [m, n, 2]));
+plot_grid(reshape(p, [m, n, 2]), 1, 'g--o');
+hold on; quiver(p(:, 2), p(:, 1), u(:, 2), u(:, 1), 0, 'b'); hold off;
 title('image img with displaced grid');
 
 subplot(1, 2, 2);
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(img_u));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', img_u);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 title('image img interpolated at displaced grid');
