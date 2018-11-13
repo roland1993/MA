@@ -29,16 +29,16 @@ if isempty(L) || size(L, 2) ~= numel(u)
     D_yy = (1 / h(2)) ^ 2 * spdiags([e_y, -2*e_y, e_y], -1 : 1, m, m);
     
     % include boundary condition for cell-centered data
-    bc = 'dn';
+    bc = 'nn';
     switch bc
-        case 'dn'
-            % cell-centered dirichlet-null
+        case 'nn'
+            % cell-centered neumann-null
             D_xx(1  ,1  ) = -1 / h(1)^2;
             D_xx(end,end) = -1 / h(1)^2;
             D_yy(1  ,1  ) = -1 / h(2)^2;
             D_yy(end,end) = -1 / h(2)^2;
-        case 'nn'
-            % cell-centered neumann-null
+        case 'dn'
+            % cell-centered dirichlet-null
             D_xx(1  ,1  ) = -3 / h(1)^2;
             D_xx(end,end) = -3 / h(1)^2;
             D_yy(1  ,1  ) = -3 / h(2)^2;
