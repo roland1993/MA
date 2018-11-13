@@ -1,8 +1,9 @@
 %% initialization
 clear all, close all, clc;
 
-R = double(imread('hand1.png'));
-T = double(imread('hand2.png'));
+check_hand_data;
+R = double(imread('hands-R.jpg'));
+T = double(imread('hands-T.jpg'));
 [m, n] = size(R);
 h = [1, 1];
 
@@ -14,15 +15,12 @@ num_levels = length(R_ML);
 %% set up registration at lowest resolution
 dist_fctn = @(T, R, h, u) SSD(T, R, h, u);
 reg_fctn = @(u, s, h) curvature_energy(u, s, h);
-lambda = 5e4;
+lambda = 5e5;
 f = @(u) objective_function(dist_fctn, reg_fctn, lambda, ...
-    T_ML{1}.X, R_ML{1}.X, R_ML{1}.h, u);
+    T_ML{1}.img, R_ML{1}.img, R_ML{1}.h, u);
 
 % set optimization parameters
 u0 = zeros(prod(R_ML{1}.s) * 2, 1);
-tol1 = 1e-1;
-maxIter = 2000;
-tol2 = 1e-3;
 
 % some output
 str = sprintf('REGISTRATING AT LEVEL %d WITH RESOLUTION [%d, %d]', ...
@@ -33,7 +31,7 @@ fprintf('\n%s%s%s\n', ...
     repmat('~', [1, ceil(0.5 * (80 - length(str)))]));
 
 % perform optimization
-u_star = gradient_descent(f, u0, tol1, maxIter, tol2);
+u_star = newton_scheme(f, u0);
 
 %% iterate up to input resolution
 for i = 2 : num_levels
@@ -44,7 +42,7 @@ for i = 2 : num_levels
     
     % update objective function to high res
     f = @(u) objective_function(dist_fctn, reg_fctn, lambda, ...
-        T_ML{i}.X, R_ML{i}.X, R_ML{i}.h, u);
+        T_ML{i}.img, R_ML{i}.img, R_ML{i}.h, u);
     
     % more output
     str = sprintf('REGISTRATING AT LEVEL %d WITH RESOLUTION [%d, %d]', ...
@@ -53,14 +51,14 @@ for i = 2 : num_levels
         repmat('~', [1, floor(0.5 * (80 - length(str)))]), ...
         str, ...
         repmat('~', [1, ceil(0.5 * (80 - length(str)))]));
-    
-    u_star = gradient_descent(f, u_prolonged, tol1, maxIter, tol2);
+
+    u_star = newton_scheme(f, u_prolonged);
 end
 
 % evaluate output
 u_star = reshape(u_star, [m * n, 2]);
 T_u_star = evaluate_displacement(...
-    T_ML{num_levels}.X, T_ML{num_levels}.h, u_star);
+    T_ML{num_levels}.img, T_ML{num_levels}.h, u_star);
 
 % compute grid g from displacement u
 [cc_x, cc_y] = cell_centered_grid([m, n], h);
@@ -81,7 +79,7 @@ axis image;
 colorbar;
 xlabel('---x-->');
 ylabel('---y-->');
-plot_grid(g);
+plot_grid(g, 4);
 title('template T with displaced grid')
 
 subplot(1, 2, 2);
