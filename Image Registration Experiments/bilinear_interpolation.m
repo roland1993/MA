@@ -35,7 +35,7 @@ for i = 1 : l
     
     % set values for (i,j) outside of [0,m+1]x[0,n+1] to 0
     if (q(i, 1) <= 0) || (q(i, 1) >= (m + 1)) || ...
-            (q(i, 1) <= 0) || (q(i, 2) >= (n + 1))
+            (q(i, 2) <= 0) || (q(i, 2) >= (n + 1))
         img_p(i) = 0;
         if nargout == 2, dimg_p(i, :) = [0, 0]; end
     else
