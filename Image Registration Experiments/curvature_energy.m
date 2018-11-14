@@ -20,12 +20,12 @@ if isempty(LtL_h) || size(LtL_h, 2) ~= numel(u)
     
     % create discrete Laplacian operator
     %   i)  2nd order x-derivative
-    e_x = ones(n,1);
-    D_xx = (1 / h(1)) ^ 2 * spdiags([e_x, -2*e_x, e_x], -1 : 1, n, n);
+    e_x = ones(m, 1);
+    D_xx = (1 / h(1)) ^ 2 * spdiags([e_x, -2*e_x, e_x], -1 : 1, m, m);
     
     %   ii) 2nd order y-derivative
-    e_y = ones(m, 1);
-    D_yy = (1 / h(2)) ^ 2 * spdiags([e_y, -2*e_y, e_y], -1 : 1, m, m);
+    e_y = ones(n, 1);
+    D_yy = (1 / h(2)) ^ 2 * spdiags([e_y, -2*e_y, e_y], -1 : 1, n, n);
     
     % include boundary condition for cell-centered data
     bc = 'nn';
@@ -45,7 +45,7 @@ if isempty(LtL_h) || size(LtL_h, 2) ~= numel(u)
     end
     
     %   iii) combine to form discrete Laplacian L
-    L = kron(D_xx, speye(m)) + kron(speye(n), D_yy);
+    L = kron(speye(n), D_xx) + kron(D_yy, speye(m));
     L = kron(speye(2), L);
     
     % pre-compute and save h(1)*h(2)*L'*L (necessary for computing output)
