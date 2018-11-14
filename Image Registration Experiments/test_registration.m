@@ -30,26 +30,22 @@ colormap gray(256);
 
 subplot(2, 2, 1);
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(R));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', R);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 title('reference R');
 
 subplot(2, 2, 2);
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(T));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', T);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 title('template T');
 
 %% registration procedure
@@ -87,25 +83,21 @@ g = reshape(g, [m, n, 2]);
 
 subplot(2, 2, 3);
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(T));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', T);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 plot_grid(g, 4);
 title('template T with displaced grid')
 
 subplot(2, 2, 4);
 image(...
-    'Xdata', [h(1) / 2, (n - (1 / 2)) * h(1)], ...
-    'YData', [h(2) / 2, (m - (1 / 2)) * h(2)], ...
-    'CData', flipud(T_u_star));
-axis xy;
-axis image;
+    'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
+    'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+    'CData', T_u_star);
+axis image;     set(gca, 'YDir', 'reverse');
 colorbar;
-xlabel('---x-->');
-ylabel('---y-->');
+xlabel('---y-->');      ylabel('<--x---');
 title('transformed template T_u');
