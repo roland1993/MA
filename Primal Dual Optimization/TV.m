@@ -41,10 +41,10 @@ else
     % OR ~> evaluate convex conjugate TV* and Prox_TV* at v
     
     % conxex conjugate TV*(v) is indicator of {v : max_ij ||v_ij||_2 <= 1}
-    if max(norm_v) <= 1
-        res1 = 0;
-    else
+    if (max(norm_v) - 1) > 1e-10
         res1 = inf;
+    else
+        res1 = 0;
     end
     
     if nargout == 2
