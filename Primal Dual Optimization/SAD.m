@@ -27,15 +27,12 @@ if ~conjugate_flag
         % prox-step on u for G = [lambda * SAD] ~> pointwise shrinkage
         res2 = zeros(size(u));
         diff_ug = u - g;
-        for i = 1 : length(res2)
-            if diff_ug(i) > (tau * lambda)
-                res2(i) = u(i) - tau * lambda;
-            elseif diff_ug(i) < (-1) * (tau * lambda)
-                res2(i) = u(i) + tau * lambda;
-            else
-                res2(i) = g(i);
-            end
-        end
+        idx1 = (diff_ug > tau * lambda);
+        idx2 = (diff_ug < (-1) * tau * lambda);
+        idx3 = ~(idx1 | idx2);
+        res2(idx1) = u(idx1) - tau * lambda;
+        res2(idx2) = u(idx2) + tau * lambda;
+        res2(idx3) = g(idx3);
         
     end
     
@@ -43,7 +40,7 @@ else
     % OR ~> evaluate [lambda * SAD]* and Prox_[lambda * SAD]* at u
     
     % compute [lambda * SAD]*(u) = delta_{||.||_inf <= lambda}(u) + <u,g>
-    if max(abs(u)) > lambda
+    if (max(abs(u)) - lambda) > 1e-10
         res1 = inf;
     else
         res1 = u' * g;
