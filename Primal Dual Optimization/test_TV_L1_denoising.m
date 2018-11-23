@@ -20,16 +20,19 @@ h = [1, 1];
 
 %% setup and optimization
 
+% regularizer weighting factor
+lambda = 0.75;
+
 % define discrete gradient operator K
 Dx = (1 / h(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
 Dx(m, m) = 0;
 Dy = (1 / h(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
 Dy(n, n) = 0;
 Gx = kron(speye(n), Dx);    Gy = kron(Dy, speye(m));
-K = [Gx; Gy];
+K = lambda * [Gx; Gy];
 
 % upper bound on spectral norm of K
-L_squared = 4 * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
+L_squared = 4 * lambda ^ 2 * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
 
 % set parameters of optimization scheme 
 u0 = zeros(m * n, 1);
@@ -40,9 +43,8 @@ sigma = 1 / (L_squared * tau);
 maxIter = 250;
 
 % function handles for data term and regularizer
-lambda = 1.75;
-G = @(u, c_flag) SAD(u, img_noisy(:), lambda, tau, c_flag);
-F = @(v, c_flag) TV(v, sigma, c_flag);
+G = @(u, c_flag) SAD_denoise(u, img_noisy(:), tau, c_flag);
+F = @(v, c_flag) TV_denoise(v, sigma, c_flag);
 
 % perform optimization
 [u_star, v_star] = ...
