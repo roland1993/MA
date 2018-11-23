@@ -1,4 +1,4 @@
-function [res1, res2] = TV(v, sigma, conjugate_flag)
+function [res1, res2] = TV_denoise(v, sigma, conjugate_flag)
 % IN:
 %       v               ~ m*n*2 x 1         gradient image to regularize
 %       sigma           ~ 1 x 1             step length for prox operator
