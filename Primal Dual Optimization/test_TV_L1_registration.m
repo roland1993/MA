@@ -26,7 +26,7 @@ h = [1, 1];
 
 %% setup and optimization
 
-lambda = 10;
+lambda = 5;
 
 % define discrete gradient operator K
 Dx = (1 / h(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
@@ -40,12 +40,12 @@ K = lambda * kron(speye(2), [Gx; Gy]);
 L_squared = 4 * lambda ^ 2 * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
 
 % set parameters of optimization scheme 
-u0 = zeros(m * n * 2, 1);
-v0 = zeros(m * n * 4, 1);
+u0 = 5 * randn(m * n * 2, 1);
+v0 = 5 * randn(m * n * 4, 1);
 theta = 1;
-tau = 10;
+tau = 0.01;
 sigma = 1 / (L_squared * tau);
-maxIter = 1;
+maxIter = 3;
 
 % function handles for data term and regularizer
 G = @(u, c_flag) SAD_registration(u, u0, T, R, h, tau, c_flag);
@@ -55,7 +55,7 @@ figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
 
 % perform optimization
-for i = 1 : 150
+for i = 1 : 100
     
     T_star = evaluate_displacement(T, h, reshape(u0, [], 2));
     imagesc(...
@@ -70,13 +70,9 @@ for i = 1 : 150
         sigma, maxIter, -1, -1, -1);
     
     u0 = u_star;    v0 = v_star;
-%     
-%     u0 = 5 * randn(m * n * 2, 1);
-%     v0 = 5 * randn(m * n * 4, 1);
-%     G = @(u, c_flag) SAD_registration(u, u_star, T, R, h, tau, c_flag);
+    G = @(u, c_flag) SAD_registration(u, u_star, T, R, h, tau, c_flag);
 end
 
-% 
 % %% display results
 % 
 % figure('units', 'normalized', 'outerposition', [0 0 1 1]);
