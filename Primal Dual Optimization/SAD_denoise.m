@@ -13,7 +13,7 @@ function [res1, res2] = SAD_denoise(u, g, tau, conjugate_flag)
 %       res2            ~ m*n x 1       prox-step of SAD* for u
 
 % by default: evaluate SAD instead of its conjugate
-if nargin < 5, conjugate_flag = false; end
+if nargin < 4, conjugate_flag = false; end
 
 if ~conjugate_flag
     % EITHER ~> evaluate SAD and Prox_[SAD] at u
@@ -39,11 +39,10 @@ else
     % OR ~> evaluate SAD* and Prox_[SAD*] at u
     
     % compute SAD*(u) = delta_{||.||_inf <= 1}(u) + <u,g>
-    if (max(abs(u)) - 1) > 1e-10
-        res1 = inf;
-    else
-        res1 = u' * g;
+    if max(abs(u)) > 1
+        fprintf('\nConstraint hurt by %.2e\n', (max(abs(u)) - 1));
     end
+    res1 = u' * g;
     
     if nargout == 2
         
