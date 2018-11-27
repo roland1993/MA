@@ -27,8 +27,8 @@ switch data
     case 'rect_in_rect'
         R = double(imread('rect_in_rect_1.png'));
         T = double(imread('rect_in_rect_2.png'));
-        lambda = 0.025;
-        tau = 80;
+        lambda = 0.03;
+        tau = 100;
         maxIter = 15;
         numSteps = 50;
         
@@ -101,7 +101,7 @@ for i = 1 : numSteps
     drawnow;
     
     [u_star, v_star] = chambolle_pock(F, G, K, u0, v0, theta, tau, ...
-        sigma, maxIter, -1, -1, -1);
+        sigma, maxIter);
     
     u0 = u_star;    v0 = v_star;
     G = @(u, c_flag) SSD_registration(u, u_star, T, R, h, tau, c_flag);
