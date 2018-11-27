@@ -1,6 +1,5 @@
-function [x_star, y_star] = ...
-    chambolle_pock(F, G, K, x0, y0, theta, tau, sigma, ...
-    maxIter, tol1, tol2, tol3)
+function [x_star, y_star, primal_history, dual_history] = ...
+    chambolle_pock(F, G, K, x0, y0, theta, tau, sigma, maxIter, tol)
 % Solve the primal minimization problem
 %       min_x   F(Kx) + G(x)
 % by primal-dual reformulation into a saddle-point problem
@@ -27,18 +26,16 @@ function [x_star, y_star] = ...
 %   sigma   ~ 1 x 1                 dual step width
 %       NOTE: tau * sigma * ||K||^2 < 1 to ensure convergence!
 %   maxIter ~ 1 x 1                 max #iterations as stopping criterion
-%   tol1    ~ 1 x 1                 tolerance for duality gap change
-%   tol2    ~ 1 x 1                 tolerance for primal objective change
-%   tol3    ~ 1 x 1                 tolerance for dual objective change
+%   tol     ~ 1 x 1                 tolerance for normalized duality gap
 % OUT:
-%   x_star  ~ n x 1                 minimizer of primal problem
-%   y_star  ~ m x 1                 maximizer of dual problem
+%   x_star          ~ n x 1         minimizer of primal problem
+%   y_star          ~ m x 1         maximizer of dual problem
+%   primal_history  ~ #iter x 1     history of primal energy over iterates
+%   dual_history    ~ #iter x 1     history of dual energy over iterates
 
 % set standard parameters
-if nargin < 12, tol3 = 1e-4; end
-if nargin < 11, tol2 = 1e-4; end
-if nargin < 10, tol1 = 1e-4; end
-if nargin < 9, maxIter = 100; end
+if nargin < 10, tol = 1e-3; end
+if nargin < 9, maxIter = 300; end
 if nargin < 8
     % estimate squared spectral norm of K to determine sigma from tau
     K_abs = abs(K);
@@ -75,8 +72,8 @@ dual_history(1) = dual_objective(y0);
 
 % output some info
 fprintf('\nCHAMBOLLE POCK PRIMAL DUAL OPTIMIZATION SCHEME\n');
-fprintf('\n\tPRIMAL PROBLEM:\t\tp(x) = F(Kx) + G(x)\t\t-> min!\n');
-fprintf('\tDUAL PROBLEM:\t\tq(y) = -G*(-K*y) - F*(y)\t-> max!\n');
+fprintf('\n\tPRIMAL PROBLEM\tp(x) = F(Kx) + G(x)\t\t-> min!\n');
+fprintf('\tDUAL PROBLEM\tq(y) = -G*(-K*y) - F*(y)\t-> max!\n');
 fprintf('\nFOR\n\n\tF = %s\n\tG = %s\n', func2str(F), func2str(G));
 fprintf('\nWITH PARAMETERS\n');
 fprintf('\n\tEXTRAGRADIENT STEP SIZE\t\tTHETA\t= %.3f', theta);
@@ -84,23 +81,18 @@ fprintf('\n\tPRIMAL STEP SIZE\t\tTAU\t= %.3f', tau);
 fprintf('\n\tDUAL STEP SIZE\t\t\tSIGMA\t= %.3f\n', sigma);
 fprintf('\n\tNUMBER OF PRIMAL VARIABLES\t %d', numel(x0));
 fprintf('\n\tNUMBER OF DUAL VARIABLES\t %d\n', numel(y0));
-fprintf('\n\tMAX NUMBER OF ITERATIONS\t %d\n', maxIter);
-fprintf(['\ni\tp(x_i)\t\tp(x_i)/p(x_i-1)\t q(y_i)', ...
-    '\t\tq(y_i)/q(y_i-1)\t p(x_i)-q(y_i)\n']);
-fprintf([repmat('-', [1, 86]), '\n']);
-fprintf('%d\t%.2e\t-\t\t %.2e\t-\t\t %.2e\n', ...
+fprintf('\n\tMAX NUMBER OF ITERATIONS\t %d', maxIter);
+fprintf('\n\tTOLERANCE FOR NORMALIZED GAP\t %.1e\n', tol);
+fprintf('\ni\tp(x_i)\t\tq(y_i)\t\t|(p(x_i)-q(y_i))/q(y_i)|\n');
+fprintf([repmat('-', [1, 64]), '\n']);
+fprintf('%d\t%+.2e\t%+.2e\t%.2e\n', ...
     0, primal_history(1), dual_history(1), ...
-    primal_history(1) - dual_history(1));
+    abs((primal_history(1) - dual_history(1)) / dual_history(1)));
 
 % perform iteration
-while (i < maxIter) % && ...
-%         ((i < 4) || ...
-%         abs(1 - (primal_history(i) / primal_history(i - 3))) > tol2) && ...
-%         ((i < 4) || ...
-%         abs(1 - (primal_history(i) - dual_history(i)) / ...
-%         (primal_history(i - 3) - dual_history(i - 3))) > tol1) && ...
-%         ((i < 4) || ...
-%         abs(1 - (dual_history(i) / dual_history(i - 3))) > tol3)
+while (i < maxIter) ...
+%         && abs((primal_history(i + 1) - dual_history(i + 1)) / ...
+%         dual_history(i + 1)) > tol
     
     % increase iteration counter
     i = i + 1;
@@ -122,42 +114,24 @@ while (i < maxIter) % && ...
     x_bar = x_current + theta * (x_current - x_old);
     
     % iterative output
-    
-    fprintf('%d\t%.2e\t%.4f\t\t %.2e\t%.4f\t\t %.2e\n', i, ...
-        primal_history(i + 1), ...
-        primal_history(i + 1) / primal_history(i), ...
-        dual_history(i + 1), ...
-        dual_history(i + 1) / dual_history(i), ...
-        primal_history(i + 1) - dual_history(i + 1));
+    fprintf('%d\t%+.2e\t%+.2e\t%.2e\n', i, primal_history(i + 1), ...
+        dual_history(i + 1), abs((primal_history(i + 1) - ...
+        dual_history(i + 1)) / dual_history(i + 1)));
     
 end
 
 % more output
 fprintf('\nSTOPPING AT CRITERION:\n\n\t');
 if i == maxIter
-    fprintf(...
-        'MAX NUMBER OF ITERATIONS REACHED\ti = %d', ...
-        maxIter);
-    
-elseif abs(1 - (primal_history(i) - dual_history(i)) / ...
-        (primal_history(i - 3) - dual_history(i - 3))) <= tol1
-    fprintf(...
-        'RELATIVE GAP CHANGE OVER LAST 3 ITERATES %.2e <= %.2e', ...
-        abs(1 - (primal_history(i) - dual_history(i)) / ...
-        (primal_history(i - 3) - dual_history(i - 3))), tol1);
-    
-elseif abs(1 - (primal_history(i) / primal_history(i - 3))) <= tol2
-    fprintf(...
-        'RELATIVE PRIMAL CHANGE OVER LAST 3 ITERATES %.2e <= %.2e', ...
-        abs(1 - (primal_history(i) / primal_history(i - 3))), tol2);
-    
-elseif abs(1 - (dual_history(i) / dual_history(i - 3))) <= tol3
-    fprintf(...
-        'RELATIVE DUAL CHANGE OVER LAST 3 ITERATES %.2e <= %.2e', ...
-        abs(1 - (dual_history(i) / dual_history(i - 3))), tol3);
-    
+    fprintf('MAX NUMBER OF ITERATIONS REACHED\ti = %d\n\n', maxIter);
+else
+    fprintf(['TOLERANCE FOR NORMALIZED GAP REACHED\t', ...
+        '%.2e <= %.2e\n\n'], ...
+        abs((primal_history(i + 1) - dual_history(i + 1)) / ...
+        dual_history(i + 1)), tol);
+    primal_history(i + 2 : end) = [];
+    dual_history(i + 2 : end) = [];
 end
-fprintf('\n\n');
 
 % return last iterates
 x_star = x_current;
