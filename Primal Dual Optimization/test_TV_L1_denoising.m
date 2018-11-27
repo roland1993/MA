@@ -46,8 +46,15 @@ G = @(u, c_flag) SAD_denoise(u, img_noisy(:), tau, c_flag);
 F = @(v, c_flag) TV_denoise(v, sigma, c_flag);
 
 % perform optimization
-[u_star, v_star] = chambolle_pock(F, G, K, u0, v0, theta, tau, sigma);
+[u_star, v_star, primal_history, dual_history] = ...
+    chambolle_pock(F, G, K, u0, v0, theta, tau, sigma);
 img_denoise = reshape(u_star, size(img));
+
+figure;
+plot(1 : numel(primal_history), primal_history, ...
+    1 : numel(primal_history), dual_history);
+grid on;    axis tight;
+legend('primal energy', 'dual energy');     xlabel('#iter');
 
 %% display results
 
