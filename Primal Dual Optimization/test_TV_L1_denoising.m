@@ -39,16 +39,14 @@ u0 = zeros(m * n, 1);
 v0 = zeros(m * n * 2, 1);
 theta = 1;
 tau = 0.02;
-sigma = 1 / (L_squared * tau);
-maxIter = 250;
+sigma = (1 - 1e-4) / (L_squared * tau);
 
 % function handles for data term and regularizer
 G = @(u, c_flag) SAD_denoise(u, img_noisy(:), tau, c_flag);
 F = @(v, c_flag) TV_denoise(v, sigma, c_flag);
 
 % perform optimization
-[u_star, v_star] = ...
-    chambolle_pock(F, G, K, u0, v0, theta, tau, sigma, maxIter);
+[u_star, v_star] = chambolle_pock(F, G, K, u0, v0, theta, tau, sigma);
 img_denoise = reshape(u_star, size(img));
 
 %% display results
