@@ -60,21 +60,18 @@ y_current = y0;
 x_current = x0;
 x_bar = x0;
 
-% function handles for primal and dual objective
-primal_objective = @(x) F(K*x, false) + G(x, false);
-dual_objective = @(y) -G(-K'*y, true) - F(y, true);
-
 % record progress in primal and dual objective
 primal_history = zeros(maxIter + 1, 1);
 dual_history = zeros(maxIter + 1, 1);
-primal_history(1) = primal_objective(x0);
-dual_history(1) = dual_objective(y0);
+[primal_history(1), F_con, G_con] = primal_objective(x0);
+[dual_history(1), FS_con, GS_con] = dual_objective(y0);
 
 % output some info
 fprintf('\nCHAMBOLLE POCK PRIMAL DUAL OPTIMIZATION SCHEME\n');
 fprintf('\n\tPRIMAL PROBLEM\tp(x) = F(Kx) + G(x)\t\t-> min!\n');
 fprintf('\tDUAL PROBLEM\tq(y) = -G*(-K*y) - F*(y)\t-> max!\n');
 fprintf('\nFOR\n\n\tF = %s\n\tG = %s\n', func2str(F), func2str(G));
+fprintf('\tGAP(x,y) = |p(x)-q(y)| / |q(y)|\n');
 fprintf('\nWITH PARAMETERS\n');
 fprintf('\n\tEXTRAGRADIENT STEP SIZE\t\tTHETA\t= %.3f', theta);
 fprintf('\n\tPRIMAL STEP SIZE\t\tTAU\t= %.3f', tau);
@@ -83,11 +80,15 @@ fprintf('\n\tNUMBER OF PRIMAL VARIABLES\t %d', numel(x0));
 fprintf('\n\tNUMBER OF DUAL VARIABLES\t %d\n', numel(y0));
 fprintf('\n\tMAX NUMBER OF ITERATIONS\t %d', maxIter);
 fprintf('\n\tTOLERANCE FOR NORMALIZED GAP\t %.1e\n', tol);
-fprintf('\ni\tp(x_i)\t\tq(y_i)\t\t|(p(x_i)-q(y_i))/q(y_i)|\n');
-fprintf([repmat('-', [1, 64]), '\n']);
-fprintf('%d\t%+.2e\t%+.2e\t%.2e\n', ...
+fprintf('\ni\tp(x_i)\t\tq(y_i)\t\tGAP(x_i,y_i)\tCONSTRAINTS HURT\n');
+fprintf([repmat('-', [1, 72]), '\n']);
+fprintf('%d\t%+.2e\t%+.2e\t%.3e\n', ...
     0, primal_history(1), dual_history(1), ...
     abs((primal_history(1) - dual_history(1)) / dual_history(1)));
+if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
+if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
+if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
+if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
 
 % perform iteration
 while (i < maxIter) ...
@@ -107,17 +108,22 @@ while (i < maxIter) ...
     [~, x_current] = G(x_current - tau * (K' * y_current), false);
     
     % record primal and dual objective value for current iterates
-    primal_history(i + 1) = primal_objective(x_current);
-    dual_history(i + 1) = dual_objective(y_current);
+    [primal_history(i + 1), F_con, G_con] = primal_objective(x_current);
+    [dual_history(i + 1), FS_con, GS_con] = dual_objective(y_current);
     
     % x_bar_{n+1} = x_{n+1} + theta * (x_{n+1} - x_n)
     x_bar = x_current + theta * (x_current - x_old);
     
     % iterative output
-    fprintf('%d\t%+.2e\t%+.2e\t%.2e\n', i, primal_history(i + 1), ...
+    fprintf('%d\t%+.2e\t%+.2e\t%.3e', i, primal_history(i + 1), ...
         dual_history(i + 1), abs((primal_history(i + 1) - ...
         dual_history(i + 1)) / dual_history(i + 1)));
-    
+    if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
+    if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
+    if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
+    if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
+    fprintf('\n');
+
 end
 
 % more output
@@ -136,5 +142,18 @@ end
 % return last iterates
 x_star = x_current;
 y_star = y_current;
+
+% primal and dual objective handles
+    function [primal, F_constraint, G_constraint] = primal_objective(x)
+        [F_val, ~, F_constraint] = F(K*x, false);
+        [G_val, ~, G_constraint] = G(x, false);
+        primal = F_val + G_val;
+    end
+
+    function [dual, FStar_constraint, GStar_constraint] = dual_objective(y)
+        [FStar_val, ~, FStar_constraint] = F(y, true);
+        [GStar_val, ~, GStar_constraint] = G(-K'*y, true);
+        dual = (-1) * (FStar_val + GStar_val);
+    end
 
 end
