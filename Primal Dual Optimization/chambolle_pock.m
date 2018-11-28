@@ -1,5 +1,6 @@
 function [x_star, y_star, primal_history, dual_history] = ...
     chambolle_pock(F, G, K, x0, y0, theta, tau, sigma, maxIter, tol)
+%
 % Solve the primal minimization problem
 %       min_x   F(Kx) + G(x)
 % by primal-dual reformulation into a saddle-point problem
@@ -95,7 +96,7 @@ while true
     
     % first stopping criterion
     if i == maxIter
-        break; 
+        break;
     end
     
     % second stopping criterion
