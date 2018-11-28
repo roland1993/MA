@@ -56,7 +56,7 @@ else
         % compute prox-step for G* = SAD* with Moreau's identity
         %   [(id + tau * dG*)^(-1)](u) = 
         %       u - tau * [(id + (1 / tau) * dG)^(-1)](u / tau)
-        [~, prox] = SAD(u / tau, g, tau, false);
+        [~, prox] = SAD_denoise(u / tau, g, 1 / tau, false);
         res2 = u - tau * prox;
         
     else
