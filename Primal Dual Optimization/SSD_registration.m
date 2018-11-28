@@ -1,4 +1,4 @@
-function [res1, res2] = ...
+function [res1, res2, res3] = ...
     SSD_registration(u, u0, T, R, h, tau, conjugate_flag)
 % IN:
 %       u               ~ m*n*2 x 1     evaluation point
@@ -12,12 +12,17 @@ function [res1, res2] = ...
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1         function value SSD(u)
 %       res2            ~ m*n*2 x 1     prox step of SSD at u
+%       res3            ~ 1 x 1         measure for hurt constraints
 %   IF conjugate_flag:
 %       res1            ~ 1 x 1         convex conjugate value SSD*(u)
 %       res2            ~ m*n*2 x 1     prox step of SSD* at u
+%       res3            ~ 1 x 1        	measure for hurt constraints
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 7, conjugate_flag = false; end
+
+% initialize constraint measure with 0
+res3 = 0;
 
 % get k = m * n
 k = numel(T);
@@ -33,24 +38,37 @@ if ~conjugate_flag
     residual = (grad_T * u) + b;
     res1 = (1 / 2) * (residual' * residual);
     
+    % Prox_[SSD]
     if nargout == 2
         
         D1 = grad_T(:, 1 : k);
         D2 = grad_T(:, (k + 1) : end);
-        
         A = [speye(k) + tau * D1 .^ 2, tau * D1 .* D2; ...
             tau * D1 .* D2, speye(k) + tau * D2 .^ 2];
-        
         c = u - tau * grad_T' * b;
-        
         res2 = A \ c;
         
+    else
+        res2 = [];
     end
     
 else
-    % ...todo
+    % ... todo
     res1 = -inf;
-    if nargout == 2, res2 = -inf * ones(size(u0)); end
+    
+    % Prox_[SSD*]
+    if nargout == 2
+        
+        % compute prox-step for G* = SSD* with Moreau's identity
+        %   [(id + tau * dG*)^(-1)](u) =
+        %       u - tau * [(id + (1 / tau) * dG)^(-1)](u / tau)
+        [~, prox] = SSD_registration(u / tau, u0, T, R, h, 1 / tau, false);
+        res2 = u - tau * prox;
+        
+    else
+        res2 = [];
+    end
+    
 end
 
 end
