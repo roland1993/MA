@@ -1,4 +1,4 @@
-function [res1, res2] = SAD_denoise(u, g, tau, conjugate_flag)
+function [res1, res2, res3] = SAD_denoise(u, g, tau, conjugate_flag)
 % IN:
 %       u               ~ m*n x 1       template image (for denoising)
 %       g               ~ m*n x 1       reference image (noisy)
@@ -8,12 +8,17 @@ function [res1, res2] = SAD_denoise(u, g, tau, conjugate_flag)
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1         function value SAD(u)
 %       res2            ~ m*n x 1       prox-step of SAD for u
+%       res3            ~ 1 x 1         measure for hurt constraints
 %   IF conjugate_flag:
 %       res1            ~ 1 x 1         convex conjugate SAD*(u)
 %       res2            ~ m*n x 1       prox-step of SAD* for u
+%       res3            ~ 1 x 1         measure for hurt constraints
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 4, conjugate_flag = false; end
+
+% initialize constraint measure with 0
+res3 = 0;
 
 if ~conjugate_flag
     % EITHER ~> evaluate SAD and Prox_[SAD] at u
@@ -33,6 +38,8 @@ if ~conjugate_flag
         res2(idx2) = u(idx2) + tau;
         res2(idx3) = g(idx3);
         
+    else
+        res2 = [];
     end
     
 else
@@ -40,7 +47,7 @@ else
     
     % compute SAD*(u) = delta_{||.||_inf <= 1}(u) + <u,g>
     if max(abs(u)) > 1
-        fprintf('\nConstraint hurt by %.2e\n', (max(abs(u)) - 1));
+        res3 = max(abs(u)) - 1;
     end
     res1 = u' * g;
     
@@ -52,6 +59,8 @@ else
         [~, prox] = SAD(u / tau, g, tau, false);
         res2 = u - tau * prox;
         
+    else
+        res2 = [];
     end
     
 end

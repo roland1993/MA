@@ -1,4 +1,6 @@
-function [res1, res2] = test_G(x, g, lambda, tau, conjugate_flag)
+function [res1, res2, res3] = test_G(x, g, lambda, tau, conjugate_flag)
+
+res3 = 0;
 
 if ~conjugate_flag
     

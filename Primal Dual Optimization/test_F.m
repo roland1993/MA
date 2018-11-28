@@ -1,4 +1,6 @@
-function [res1, res2] = test_F(y, sigma, conjugate_flag)
+function [res1, res2, res3] = test_F(y, sigma, conjugate_flag)
+
+res3 = 0;
 
 if ~conjugate_flag
 
