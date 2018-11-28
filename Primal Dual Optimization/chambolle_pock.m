@@ -91,9 +91,19 @@ if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
 if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
 
 % perform iteration
-while (i < maxIter) ...
-%         && abs((primal_history(i + 1) - dual_history(i + 1)) / ...
-%         dual_history(i + 1)) > tol
+while true
+    
+    % first stopping criterion
+    if i == maxIter
+        break; 
+    end
+    
+    % second stopping criterion
+    GAP = abs((primal_history(i + 1) - dual_history(i + 1)) / ...
+        dual_history(i + 1));
+    if ~isnan(GAP) && (GAP <= tol)
+        break;
+    end
     
     % increase iteration counter
     i = i + 1;
