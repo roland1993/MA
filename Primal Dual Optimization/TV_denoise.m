@@ -37,7 +37,7 @@ if ~conjugate_flag
         % compute prox-step for F = TV with Moreau's identity
         %   [(id + sigma * dF)^(-1)](v) =
         %       v - sigma * [(id + (1 / sigma) * dF*)^(-1)](v / sigma)
-        [~, conjugate_prox] = TV((v / sigma), (1 / sigma), true);
+        [~, conjugate_prox] = TV(v / sigma, 1 / sigma, true);
         res2 = v - sigma * conjugate_prox;
         
     else
