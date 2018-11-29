@@ -83,13 +83,14 @@ fprintf('\n\tMAX NUMBER OF ITERATIONS\t %d', maxIter);
 fprintf('\n\tTOLERANCE FOR NORMALIZED GAP\t %.1e\n', tol);
 fprintf('\ni\tp(x_i)\t\tq(y_i)\t\tGAP(x_i,y_i)\tCONSTRAINTS HURT\n');
 fprintf([repmat('-', [1, 72]), '\n']);
-fprintf('%d\t%+.2e\t%+.2e\t%.3e\n', ...
+fprintf('%d\t%+.2e\t%+.2e\t%.3e', ...
     0, primal_history(1), dual_history(1), ...
     abs((primal_history(1) - dual_history(1)) / dual_history(1)));
 if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
 if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
 if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
 if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
+fprintf('\n');
 
 % perform iteration
 while true
