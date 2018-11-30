@@ -1,4 +1,4 @@
-function [res1, res2] = ...
+function [res1, res2, res3] = ...
     SAD_registration(u, u0, T, R, h, tau, conjugate_flag)
 % IN:
 %       u               ~ m*n*2 x 1     evaluation point
@@ -12,12 +12,16 @@ function [res1, res2] = ...
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1         function value SAD(u)
 %       res2            ~ m*n*2 x 1     prox step of SAD at u
+%       res3            ~ 1 x 1         measure for hurt constraints
 %   IF conjugate_flag:
 %       res1            ~ 1 x 1         convex conjugate value SAD*(u)
 %       res2            ~ m*n*2 x 1     prox step of SAD* at u
+%       res3            ~ 1 x 1         measure for hurt constraints
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 7, conjugate_flag = false; end
+
+res3 = 0;
 
 % linearize interpolation of T at u0
 [T, grad_T] = evaluate_displacement(T, h, reshape(u0, [], 2));
@@ -43,8 +47,8 @@ if ~conjugate_flag
         idx3 = ~(idx1 | idx2);
         
         % split case 3 to prevent division by zero!
-        idx3_1 = idx3 & (norm_grad_squared > 0);
-        idx3_2 = idx3 & (norm_grad_squared == 0);
+        idx3_1 = idx3 & (norm_grad_squared > 1e-14);
+        idx3_2 = idx3 & (norm_grad_squared <= 1e-14);
         
         u = reshape(u, k, 2);
         res2 = zeros(size(u));
@@ -60,12 +64,18 @@ if ~conjugate_flag
         
         res2 = res2(:);
         
+    else
+        res2 = [];
     end
     
 else
     % ...todo
     res1 = -inf;
-    if nargout == 2, res2 = -inf * ones(size(u0)); end
+    if nargout == 2
+        res2 = -inf * ones(size(u0)); 
+    else
+        res2 = [];
+    end
 end
 
 end
