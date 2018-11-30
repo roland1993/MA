@@ -21,7 +21,7 @@ h = [1, 1];
 %% setup and optimization
 
 % regularizer weighting factor
-lambda = 0.75;
+lambda = 1.5;
 
 % define discrete gradient operator K
 Dx = (1 / h(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
@@ -29,10 +29,10 @@ Dx(m, m) = 0;
 Dy = (1 / h(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
 Dy(n, n) = 0;
 Gx = kron(speye(n), Dx);    Gy = kron(Dy, speye(m));
-K = lambda * [Gx; Gy];
+K = [Gx; Gy];
 
 % upper bound on spectral norm of K
-L_squared = 4 * lambda ^ 2 * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
+L_squared = 4 * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
 
 % set parameters of optimization scheme 
 u0 = zeros(m * n, 1);
@@ -40,14 +40,16 @@ v0 = zeros(m * n * 2, 1);
 theta = 1;
 tau = 0.02;
 sigma = (1 - 1e-4) / (L_squared * tau);
+maxIter = 1000;
+tol = 1e-5;
 
 % function handles for data term and regularizer
-G = @(u, c_flag) SAD_denoise(u, img_noisy(:), tau, c_flag);
+G = @(u, c_flag) SAD_denoise(u, img_noisy(:), lambda, tau, c_flag);
 F = @(v, c_flag) TV_denoise(v, sigma, c_flag);
 
 % perform optimization
 [u_star, v_star, primal_history, dual_history] = ...
-    chambolle_pock(F, G, K, u0, v0, theta, tau, sigma);
+    chambolle_pock(F, G, K, u0, v0, theta, tau, sigma, maxIter, tol);
 img_denoise = reshape(u_star, size(img));
 
 figure;

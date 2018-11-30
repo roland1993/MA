@@ -1,11 +1,12 @@
 function [res1, res2, res3] = ...
-    SSD_registration(u, u0, T, R, h, tau, conjugate_flag)
+    SSD_registration(u, u0, T, R, h, lambda, tau, conjugate_flag)
 % IN:
 %       u               ~ m*n*2 x 1     evaluation point
 %       u0              ~ m*n*2 x 1     development point for linearizing T
 %       T               ~ m x n         original template image
 %       R               ~ m x n         reference image
 %       h               ~ 2 x 1         grid spacing
+%       lambda          ~ 1 x 1         weighting factor
 %       tau             ~ 1 x 1         prox-operator step size
 %       conjugate_flag  ~ logical       evaluate SSD or SSD* at u?
 % OUT:
@@ -19,7 +20,7 @@ function [res1, res2, res3] = ...
 %       res3            ~ 1 x 1        	measure for hurt constraints
 
 % by default: evaluate SAD instead of its conjugate
-if nargin < 7, conjugate_flag = false; end
+if nargin < 8, conjugate_flag = false; end
 
 % initialize constraint measure with 0
 res3 = 0;
@@ -36,16 +37,18 @@ if ~conjugate_flag
     
     % SSD = 0.5 * ||grad_T(u0) * u + b||^2, b = T(u0) - grad_T(u0)*u0 - R
     residual = (grad_T * u) + b;
-    res1 = (1 / 2) * (residual' * residual);
+    res1 = 0.5 * lambda * (residual' * residual);
     
     % Prox_[SSD]
     if nargout == 2
         
         D1 = grad_T(:, 1 : k);
         D2 = grad_T(:, (k + 1) : end);
-        A = [speye(k) + tau * D1 .^ 2, tau * D1 .* D2; ...
-            tau * D1 .* D2, speye(k) + tau * D2 .^ 2];
-        c = u - tau * grad_T' * b;
+        A = [speye(k) + (lambda * tau) * D1 .^ 2, ...
+            (lambda * tau) * D1 .* D2; ...
+            (lambda * tau) * D1 .* D2, ...
+            speye(k) + (lambda * tau) * D2 .^ 2];
+        c = u - (lambda * tau) * grad_T' * b;
         res2 = A \ c;
         
     else
@@ -53,6 +56,9 @@ if ~conjugate_flag
     end
     
 else
+    
+    % scaling lambda ~> [lambda * G]*(u) = lambda * G*(u/lambda)
+    u = u / lambda;
     
     % conjugate of SSD = sum_ij 0.5 * (grad_T_ij * u_ij + b_ij) ^ 2
     %   = sum_ij {0.5 * u_ij' * grad_T_ij' * grad_T_ij * u_ij
@@ -70,7 +76,7 @@ else
     res1(idx) = res1(idx) ./ (norm_grad_squared(idx) .^ 2);
     
     res1 = res1 - 0.5 * b .^ 2;
-    res1 = sum(res1);
+    res1 = lambda * sum(res1);
     
     % constraint: (v - b) has to be in Image(pinv(A))
     %   -> error measure given by distance from this subspace
@@ -95,8 +101,9 @@ else
         % compute prox-step for G* = SSD* with Moreau's identity
         %   [(id + tau * dG*)^(-1)](u) =
         %       u - tau * [(id + (1 / tau) * dG)^(-1)](u / tau)
-        [~, prox] = SSD_registration(u / tau, u0, T, R, h, 1 / tau, false);
-        res2 = u - tau * prox;
+        [~, prox] = SSD_registration(u / (lambda * tau), u0, T, R, h, ...
+            lambda, 1 / (lambda * tau), false);
+        res2 = u - (lambda * tau) * prox;
         
     else
         res2 = [];
