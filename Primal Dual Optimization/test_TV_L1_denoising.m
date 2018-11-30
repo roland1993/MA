@@ -52,15 +52,15 @@ F = @(v, c_flag) TV_denoise(v, sigma, c_flag);
     chambolle_pock(F, G, K, u0, v0, theta, tau, sigma, maxIter, tol);
 img_denoise = reshape(u_star, size(img));
 
-figure;
+%% display results
+
+figure('units', 'normalized', 'outerposition', [0.5 0 0.5 1]);
 plot(1 : numel(primal_history), primal_history, ...
     1 : numel(primal_history), dual_history);
 grid on;    axis tight;
 legend('primal energy', 'dual energy');     xlabel('#iter');
 
-%% display results
-
-figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+figure('units', 'normalized', 'outerposition', [0 0 0.5 1]);
 colormap gray(256);
 
 % input data

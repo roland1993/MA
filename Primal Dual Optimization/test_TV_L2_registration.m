@@ -73,7 +73,7 @@ sigma = (1 - 1e-4) / (L_squared * tau);
 G = @(u, c_flag) SSD_registration(u, u0, T, R, h, lambda, tau, c_flag);
 F = @(v, c_flag) TV_registration(v, sigma, c_flag);
 
-figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+figure('units', 'normalized', 'outerposition', [0 0 0.5 1]);
 colormap gray(256);
 [xx, yy] = cell_centered_grid([m, n], h);
 
@@ -110,7 +110,7 @@ end
 
 %% display results
 
-figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+figure('units', 'normalized', 'outerposition', [0.5 0 0.5 1]);
 colormap gray(256);
 
 subplot(2, 2, 1);
