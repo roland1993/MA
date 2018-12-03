@@ -19,14 +19,16 @@ switch data
     case 'rect'
         R = double(imread('rect_1.png'));
         T = double(imread('rect_2.png'));
-        lambda = 10;
-        tau = 40;
-        maxIter = 30;
-        numSteps = 50;
+        lambda = 5e-3;
+        tau = 20;
+        maxIter = 40;
+        numSteps = 40;
         
     case 'rect_in_rect'
         R = double(imread('rect_in_rect_1.png'));
         T = double(imread('rect_in_rect_2.png'));
+        
+        % TODO - PARAMETER OPTIMIZATION
         lambda = 0.1;
         tau = 50;
         maxIter = 30;
@@ -35,6 +37,8 @@ switch data
     case 'sliding_rect'
         R = double(imread('sliding_rect_1.png'));
         T = double(imread('sliding_rect_2.png'));
+        
+        % TODO - PARAMETER OPTIMIZATION
         lambda = 0.1;
         tau = 50;
         maxIter = 30;
@@ -58,10 +62,10 @@ Dx(m, m) = 0;
 Dy = (1 / h(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
 Dy(n, n) = 0;
 Gx = kron(speye(n), Dx);    Gy = kron(Dy, speye(m));
-K = lambda * kron(speye(2), [Gx; Gy]);
+K = kron(speye(2), [Gx; Gy]);
 
 % upper bound on spectral norm of K
-L_squared = 4 * (lambda ^ 2) * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
+L_squared = 4 * (1 / h(1) ^ 2 + 1 / h(2) ^ 2);
 
 % set parameters of optimization scheme
 u0 = zeros(m * n * 2, 1);
@@ -70,7 +74,7 @@ theta = 1;
 sigma = (1 - 1e-4) / (L_squared * tau);
 
 % function handles for data term and regularizer
-G = @(u, c_flag) SAD_registration(u, u0, T, R, h, tau, c_flag);
+G = @(u, c_flag) SAD_registration(u, u0, T, R, h, lambda, tau, c_flag);
 F = @(v, c_flag) TV_registration(v, sigma, c_flag);
 
 figure('units', 'normalized', 'outerposition', [0 0 0.5 1]);
@@ -104,7 +108,7 @@ for i = 1 : numSteps
         chambolle_pock(F, G, K, u0, v0, theta, tau, sigma, maxIter);
     
     u0 = u_star;    v0 = v_star;
-    G = @(u, c_flag) SAD_registration(u, u0, T, R, h, tau, c_flag);
+    G = @(u, c_flag) SAD_registration(u, u0, T, R, h, lambda, tau, c_flag);
     
 end
 
