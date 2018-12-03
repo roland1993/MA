@@ -1,13 +1,13 @@
-function [x_star, y_star, primal_history, dual_history] = ...
+function [x_star, y_star, primal_history,dual_history] = ...
     chambolle_pock(F, G, K, x0, y0, theta, tau, sigma, maxIter, tol)
 %
 % Solve the primal minimization problem
-%       min_x   F(Kx) + G(x)
+%       min_x p(x) = F(Kx) + G(x)
 % by primal-dual reformulation into a saddle-point problem
 %       min_x max_y <Kx,y> + G(x) - F*(y),
 % where F, G are convex, proper and lsc. Note that both problems are
 % equivalent to the dual problem
-%       max_y -G*(-K'y) - F*(y).
+%       max_y q(y) = -(G*(-K'y) + F*(y)).
 %
 % IN:
 %   F       ~ function handle       to return (based on switch flag)
@@ -31,8 +31,10 @@ function [x_star, y_star, primal_history, dual_history] = ...
 % OUT:
 %   x_star          ~ n x 1         minimizer of primal problem
 %   y_star          ~ m x 1         maximizer of dual problem
-%   primal_history  ~ #iter x 1     history of primal energy over iterates
-%   dual_history    ~ #iter x 1     history of dual energy over iterates
+%   primal_history  ~ #iter x 3     history over all iterates of
+%                                       p(x_i), F(K*x_i) and G(x_i)                      
+%   dual_history    ~ #iter x 3     history over all iterates of
+%                                       q(y_i), F(y_i) and G(-K'*y_i)
 
 % set standard parameters
 if nargin < 10, tol = 1e-3; end
@@ -61,11 +63,19 @@ y_current = y0;
 x_current = x0;
 x_bar = x0;
 
-% record progress in primal and dual objective
+% record progress in primal, F and G ...
 primal_history = zeros(maxIter + 1, 1);
+G_history = zeros(maxIter + 1, 1);
+F_history = zeros(maxIter + 1, 1);
+[G_history(1), F_history(1), F_con, G_con] = primal_objective(x0);
+primal_history(1) = G_history(1) + F_history(1);
+
+% ... as well for dual, F* and G*
 dual_history = zeros(maxIter + 1, 1);
-[primal_history(1), F_con, G_con] = primal_objective(x0);
-[dual_history(1), FS_con, GS_con] = dual_objective(y0);
+GStar_history = zeros(maxIter + 1, 1);
+FStar_history = zeros(maxIter + 1, 1);
+[GStar_history(1), FStar_history(1), FS_con, GS_con] = dual_objective(y0);
+dual_history(1) = -(GStar_history(1) + FStar_history(1));
 
 % output some info
 fprintf('\nCHAMBOLLE POCK PRIMAL DUAL OPTIMIZATION SCHEME\n');
@@ -120,8 +130,13 @@ while true
     [~, x_current] = G(x_current - tau * (K' * y_current), false);
     
     % record primal and dual objective value for current iterates
-    [primal_history(i + 1), F_con, G_con] = primal_objective(x_current);
-    [dual_history(i + 1), FS_con, GS_con] = dual_objective(y_current);
+    [F_history(i + 1), G_history(i + 1), F_con, G_con] = ...
+        primal_objective(x_current);
+    primal_history(i + 1) = G_history(i + 1) + F_history(i + 1);
+    
+    [FStar_history(i + 1), GStar_history(i + 1), FS_con, GS_con] = ...
+        dual_objective(y_current);
+    dual_history(i + 1) = -(GStar_history(i + 1) + FStar_history(i + 1));
     
     % x_bar_{n+1} = x_{n+1} + theta * (x_{n+1} - x_n)
     x_bar = x_current + theta * (x_current - x_old);
@@ -135,7 +150,7 @@ while true
     if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
     if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
     fprintf('\n');
-
+    
 end
 
 % more output
@@ -147,25 +162,42 @@ else
         '%.2e <= %.2e\n\n'], ...
         abs((primal_history(i + 1) - dual_history(i + 1)) / ...
         dual_history(i + 1)), tol);
+    
+    % delete redundant entries
     primal_history(i + 2 : end) = [];
+    G_history(i + 2 : end) = [];
+    F_history(i + 2 : end) = [];
+    
     dual_history(i + 2 : end) = [];
+    GStar_history(i + 2 : end) = [];
+    FStar_history(i + 2 : end) = [];
+    
 end
 
 % return last iterates
 x_star = x_current;
 y_star = y_current;
 
-% primal and dual objective handles
-    function [primal, F_constraint, G_constraint] = primal_objective(x)
+% incorporate F_history, G_history into primal_history (conjugates as well)
+primal_history = [primal_history, F_history, G_history];
+dual_history = [dual_history, FStar_history, GStar_history];
+
+
+%-------------------------------------------------------------------------%
+% nested functions for primal and dual objective
+
+    function [F_val, G_val, F_constraint, G_constraint] = ...
+            primal_objective(x)
         [F_val, ~, F_constraint] = F(K*x, false);
         [G_val, ~, G_constraint] = G(x, false);
-        primal = F_val + G_val;
     end
 
-    function [dual, FStar_constraint, GStar_constraint] = dual_objective(y)
-        [FStar_val, ~, FStar_constraint] = F(y, true);
-        [GStar_val, ~, GStar_constraint] = G(-K'*y, true);
-        dual = (-1) * (FStar_val + GStar_val);
+    function [FS_val, GS_val, FStar_constraint, GStar_constraint] = ...
+            dual_objective(y)
+        [FS_val, ~, FStar_constraint] = F(y, true);
+        [GS_val, ~, GStar_constraint] = G(-K'*y, true);
     end
+
+%-------------------------------------------------------------------------%
 
 end
