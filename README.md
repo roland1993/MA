@@ -26,4 +26,4 @@ Convex optimization experiments with first-order primal-dual algorithm by [**Cha
 + ### TV-L2 Image Registration
 + ### TV-L1 Image Registration
  
-###### Note: Image Registration procedures use an iterative linear approximation of the template image T to achieve a convex data term. Details can be found in [A Duality Based Algorithm for TV-L1-Optical-Flow Image Registration](https://link.springer.com/chapter/10.1007/978-3-540-75759-7_62)
+###### Note: Image Registration procedures use an iterative linear approximation of the template image T to achieve a convex data term. Details can be found in [A Duality Based Algorithm for TV-L1-Optical-Flow Image Registration](https://link.springer.com/chapter/10.1007/978-3-540-75759-7_62).
