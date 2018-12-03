@@ -23,3 +23,7 @@ First simple experiments for non-parametric image registration, written in **MAT
 Convex optimization experiments with first-order primal-dual algorithm by [**Chambolle & Pock**](https://hal.archives-ouvertes.fr/hal-00490826/document), written in **MATLAB**. Provides:
 
 + ### TV-L1 Image Denoising
++ ### TV-L2 Image Registration (SSD as data term)
++ ### TV-L1 Image Registration (SAD as data term)
+
+###### Note: Image Registration procedures use an iterative linear approximation of the template image T to achieve a convex data term.
