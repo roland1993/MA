@@ -1,6 +1,6 @@
 function [img_p, dimg_p] = bilinear_interpolation(img, h, p)
 % IN:
-%   X           ~ m x n     image
+%   img         ~ m x n     image
 %   h           ~ 2 x 1     grid width [h_x, h_y]
 %   p           ~ l x 2     evaluation points (in xy-coordinates)
 % OUT:
@@ -12,60 +12,84 @@ l = size(p, 1);
 
 % use homogeneous coordinates for p
 p = [p, ones(size(p(:, 1)))];
+
 % define world matrix to switch from xy-coordinates to ij-coordinates
 W = [1/h(1), 0, 1/2; ...
     0, 1/h(2), 1/2; ...
     0, 0, 1];
+
 % switch coordinates (and remove homogeneous component)
 q = W * p';
 q = q(1 : 2, :)';
 
-% pad img for dirichlet boundary condition
-img_pad = padarray(img, [1, 1]);
-
-% evaluate bilinear interpolation of img at points p (or q respectively)
+% evaluate bilinear interpolation (and x/y-derivative) of img at points p
 img_p = zeros(l, 1);
+dimg_p = zeros(l, 2);
 
-% evaluate x-/y-derivative of interpol(img) (if requested)
-if nargout == 2
-    dimg_p = zeros(l, 2);
-end
+% get top left, bottom left, top right and bottom right grid point
+sub_tl = floor(q);
+sub_bl = sub_tl + [1, 0];
+sub_tr = sub_tl + [0, 1];
+sub_br = sub_tl + [1, 1];
 
-for i = 1 : l
-    
-    % set values for (i,j) outside of [0,m+1]x[0,n+1] to 0
-    if (q(i, 1) <= 0) || (q(i, 1) >= (m + 1)) || ...
-            (q(i, 2) <= 0) || (q(i, 2) >= (n + 1))
-        img_p(i) = 0;
-        if nargout == 2, dimg_p(i, :) = [0, 0]; end
-    else
-        
-        int = floor(q(i, :));
-        dec = q(i, :) - int;
-        
-        img_p(i) = ...
-            (1-dec(1)) * (1-dec(2)) * img_pad(int(1) + 1, int(2) + 1) + ...
-            (1-dec(1)) * dec(2) * img_pad(int(1) + 1, int(2) + 2) + ...
-            dec(1) * (1-dec(2)) * img_pad(int(1) + 2, int(2) + 1) + ...
-            dec(1) * dec(2) * img_pad(int(1) + 2, int(2) + 2);
-        
-        if nargout == 2
-            % x-derivative
-            dimg_p(i, 1) = (1 / h(1)) * (...
-                (-1) * (1-dec(2)) * img_pad(int(1) + 1, int(2) + 1) + ...
-                (-1) * dec(2) * img_pad(int(1) + 1, int(2) + 2) + ...
-                (+1) * (1-dec(2)) * img_pad(int(1) + 2, int(2) + 1) + ...
-                (+1) * dec(2) * img_pad(int(1) + 2, int(2) + 2));
-            % y-derivative
-            dimg_p(i, 2) = (1 / h(2)) * (...
-                (-1) * (1-dec(1)) * img_pad(int(1) + 1, int(2) + 1) + ...
-                (+1) * (1-dec(1)) * img_pad(int(1) + 1, int(2) + 2) + ...
-                (-1) * dec(1) * img_pad(int(1) + 2, int(2) + 1) + ...
-                (+1) * dec(1) * img_pad(int(1) + 2, int(2) + 2));
-        end
-        
-    end
-    
-end
+% get valid subscripts (i.e. inside region [1, m] x [1, n])
+tl_valid = (1 <= sub_tl(:, 1)) & (sub_tl(:, 1) <= m) & ...
+    (1 <= sub_tl(:, 2)) & (sub_tl(:, 2) <= n);
+bl_valid = (1 <= sub_bl(:, 1)) & (sub_bl(:, 1) <= m) & ...
+    (1 <= sub_bl(:, 2)) & (sub_bl(:, 2) <= n);
+tr_valid = (1 <= sub_tr(:, 1)) & (sub_tr(:, 1) <= m) & ...
+    (1 <= sub_tr(:, 2)) & (sub_tr(:, 2) <= n);
+br_valid = (1 <= sub_br(:, 1)) & (sub_br(:, 1) <= m) & ...
+    (1 <= sub_br(:, 2)) & (sub_br(:, 2) <= n);
+
+% convert all valid subscripts to linear indices
+idx_tl = sub2ind([m, n], sub_tl(tl_valid, 1), sub_tl(tl_valid, 2));
+idx_bl = sub2ind([m, n], sub_bl(bl_valid, 1), sub_bl(bl_valid, 2));
+idx_tr = sub2ind([m, n], sub_tr(tr_valid, 1), sub_tr(tr_valid, 2));
+idx_br = sub2ind([m, n], sub_br(br_valid, 1), sub_br(br_valid, 2));
+
+% get weighting coefficients
+chi = q - sub_tl;
+
+% work corners piece by piece
+%   1. top left
+img_p(tl_valid) = img_p(tl_valid) + ...
+    (1 - chi(tl_valid, 1)) .* (1 - chi(tl_valid, 2)) .* img(idx_tl);
+
+dimg_p(tl_valid, 1) = dimg_p(tl_valid, 1) + (1 / h(1)) * ...
+    (-1) * (1 - chi(tl_valid, 2)) .* img(idx_tl);
+
+dimg_p(tl_valid, 2) = dimg_p(tl_valid, 2) + (1 / h(2)) * ...
+    (-1) * (1 - chi(tl_valid, 1)) .* img(idx_tl);
+
+%   2. bottom left
+img_p(bl_valid) = img_p(bl_valid) + ...
+    chi(bl_valid, 1) .* (1 - chi(bl_valid, 2)) .* img(idx_bl);
+
+dimg_p(bl_valid, 1) = dimg_p(bl_valid, 1) + (1 / h(1)) * ...
+    (+1) * (1 - chi(bl_valid, 2)) .* img(idx_bl);
+
+dimg_p(bl_valid, 2) = dimg_p(bl_valid, 2) + (1 / h(2)) * ...
+    (-1) * chi(bl_valid, 1) .* img(idx_bl);
+
+%   3. top right
+img_p(tr_valid) = img_p(tr_valid) + ...
+    (1 - chi(tr_valid, 1)) .* chi(tr_valid, 2) .* img(idx_tr);
+
+dimg_p(tr_valid, 1) = dimg_p(tr_valid, 1) + (1 / h(1)) * ...
+    (-1) * chi(tr_valid, 2) .* img(idx_tr);
+
+dimg_p(tr_valid, 2) = dimg_p(tr_valid, 2) + (1 / h(2)) * ...
+    (+1) * (1 - chi(tr_valid, 1)) .* img(idx_tr);
+
+%   4. bottom right
+img_p(br_valid) = img_p(br_valid) + ...
+    chi(br_valid, 1) .* chi(br_valid, 2) .* img(idx_br);
+
+dimg_p(br_valid, 1) = dimg_p(br_valid, 1) + (1 / h(1)) * ...
+    (+1) * chi(br_valid, 2) .* img(idx_br);
+
+dimg_p(br_valid, 2) = dimg_p(br_valid, 2) + (1 / h(2)) * ...
+    (+1) * chi(br_valid, 1) .* img(idx_br);
 
 end
