@@ -44,8 +44,8 @@ if ~conjugate_flag
         
         % Prox_[SAD] at u = casewise thresholding step
         %   -> get indices of different cases
-        idx1 = (phi < (-tau) * norm_grad_squared);
-        idx2 = (phi > tau * norm_grad_squared);
+        idx1 = (phi < (-tau) * lambda * norm_grad_squared);
+        idx2 = (phi > tau * lambda * norm_grad_squared);
         idx3 = ~(idx1 | idx2);
         
         % split case 3 to prevent division by zero!
@@ -56,9 +56,9 @@ if ~conjugate_flag
         res2 = zeros(size(u));
         
         % case 1
-        res2(idx1, :) = u(idx1, :) + tau * grad_T(idx1, :);
+        res2(idx1, :) = u(idx1, :) + tau * lambda * grad_T(idx1, :);
         % case 2
-        res2(idx2, :) = u(idx2, :) - tau * grad_T(idx2, :);
+        res2(idx2, :) = u(idx2, :) - tau * lambda * grad_T(idx2, :);
         % case 3
         res2(idx3_1, :) = u(idx3_1, :) - grad_T(idx3_1, :) .* ...
             (phi(idx3_1) ./ norm_grad_squared(idx3_1));
