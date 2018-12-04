@@ -36,7 +36,7 @@ if nargout == 2
 end
 
 % output some info
-fprintf('\nNEWTON SCHEME ON %s\n\nSTOPPING CRITERIONS\n\n', ...
+fprintf('\nNEWTON SCHEME ON \n\n\t%s\n\nSTOPPING CRITERIA\n\n', ...
     func2str(f));
 fprintf('\tTOLERANCE ||grad(f)(x)|| <= %.1e\n', tol1);
 fprintf('\tMAXITER = %d\n', maxIter);
