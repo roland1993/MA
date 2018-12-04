@@ -67,14 +67,14 @@ x_bar = x0;
 primal_history = zeros(maxIter + 1, 1);
 G_history = zeros(maxIter + 1, 1);
 F_history = zeros(maxIter + 1, 1);
-[G_history(1), F_history(1), F_con, G_con] = primal_objective(x0);
+[F_history(1), G_history(1), F_con, G_con] = primal_objective(x0);
 primal_history(1) = G_history(1) + F_history(1);
 
 % ... as well for dual, F* and G*
 dual_history = zeros(maxIter + 1, 1);
 GStar_history = zeros(maxIter + 1, 1);
 FStar_history = zeros(maxIter + 1, 1);
-[GStar_history(1), FStar_history(1), FS_con, GS_con] = dual_objective(y0);
+[FStar_history(1), GStar_history(1), FS_con, GS_con] = dual_objective(y0);
 dual_history(1) = -(GStar_history(1) + FStar_history(1));
 
 % output some info
