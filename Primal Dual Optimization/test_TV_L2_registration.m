@@ -13,7 +13,7 @@ if exist('evaluate_displacement.m') == 0
 end
 
 % choose data from {'rect', 'rect_in_rect', 'sliding_rect'}
-data = 'sliding_rect';
+data = 'rect_in_rect';
 switch data
     
     case 'rect'
@@ -27,16 +27,16 @@ switch data
     case 'rect_in_rect'
         R = double(imread('rect_in_rect_1.png'));
         T = double(imread('rect_in_rect_2.png'));
-        lambda = 25;
-        tau = 2.5;
-        maxIter = 20;
-        numSteps = 50;
+        lambda = 50;
+        tau = 3;
+        maxIter = 25;
+        numSteps = 40;
         
     case 'sliding_rect'
         R = double(imread('sliding_rect_1.png'));
         T = double(imread('sliding_rect_2.png'));
-        lambda = 100;
-        tau = 1;
+        lambda = 50;
+        tau = 4;
         maxIter = 30;
         numSteps = 40;
         
