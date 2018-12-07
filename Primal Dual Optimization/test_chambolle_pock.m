@@ -31,8 +31,8 @@ theta = 1;
 
 % plot results
 figure;
-plot(1 : numel(primal_history), primal_history, ...
-    1 : numel(primal_history), dual_history);
+plot(1 : numel(primal_history(:, 1)), primal_history(:, 1), ...
+    1 : numel(dual_history(:, 1)), dual_history(:, 1));
 grid on;    axis tight;
 legend('primal energy', 'dual energy');     xlabel('#iter');
 
