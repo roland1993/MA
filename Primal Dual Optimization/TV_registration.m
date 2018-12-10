@@ -13,8 +13,8 @@ function [res1, res2, res3] = TV_registration(v, sigma, conjugate_flag)
 %       res2            ~ m*n*2 x 1         prox-step of TV for v
 %       res3            ~ 1 x 1             measure for hurt constraints
 
-% by default: evaluate conxex conjugate
-if nargin < 3, conjugate_flag = true; end
+% by default: evaluate TV instead of its conjugate
+if nargin < 3, conjugate_flag = false; end
 
 % initialize constraint measure with 0
 res3 = 0;
