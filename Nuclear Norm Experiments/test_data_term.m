@@ -4,7 +4,7 @@ clear all, close all, clc;
 
 % make sure that interpolation routines are on search path
 if ~exist('evaluate_displacement.m')
-    addpath(genpath('..')); 
+    addpath(genpath('..'));
 end
 
 % load respiratory data
@@ -40,8 +40,8 @@ vec = @(x) x(:);
 
 % directions of moving images (orthogonal)
 dir1 = randn(1, 2);             dir1 = dir1 / max(abs(dir1));
-% dir2 = [dir1(2), -dir1(1)];
-dir2 = randn(1, 2);  dir2 = dir2 / max(abs(dir2));
+dir2 = [dir1(2), -dir1(1)];
+% dir2 = randn(1, 2);  dir2 = dir2 / max(abs(dir2));
 
 % placeholders for shifted images
 numFrames = 101;
@@ -51,7 +51,7 @@ img3_u = zeros(m, n, numFrames);
 
 % get data term     mu * ||L||_* + ||L - I(u)||_1   by optimization over L
 %   -> set parameters for Chambolle-Pock scheme
-data_term = zeros(1, numFrames);
+data_term = zeros(numFrames, numImg);
 theta = 1;
 K = speye(m * n * numImg);              norm_K = 1;
 tau = sqrt((1 - 1e-4) / norm_K ^ 2);    sigma = tau;
@@ -76,7 +76,7 @@ for i = 1 : numFrames
     F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
     [L, ~, primal_history] = ...
         chambolle_pock(F, G, K, L0, P0, theta, tau, sigma);
-    data_term(i) = primal_history(end, 1);
+    data_term(i, :) = primal_history(end, :);
     L = reshape(L, [], numImg);
     
     % store minimizer image-wise
@@ -132,11 +132,28 @@ for i = 1 : numFrames
     hold off;
     
     subplot(2, 3, 2);
-    plot(1 : i, data_term(1 : i), 'y', 'LineWidth', 2);
-    hold on;    plot(i, data_term(i), 'ro');    hold off;
-    xlim([1, numFrames]);   ylim([0, 1.25 * max(data_term)]);
-    set(gca, 'Color', 'k');
-    title('\mu || L ||_* + || L - I(u) ||_1');
+    if i == 1
+        p1 = plot(1 : i, data_term(1 : i, 1), 'y', 'LineWidth', 2);
+        hold on;
+        p2 = plot(1 : i, data_term(1 : i, 2), '--m');
+        p3 = plot(1 : i, data_term(1 : i, 3), '--g');
+        p4 = plot(i, data_term(i, 1), 'ro');
+        p5 = plot(i, data_term(i, 2), 'ro');
+        p6 = plot(i, data_term(i, 3), 'ro');
+        hold off;
+        xlim([1, numFrames]);   ylim([0, 1.25 * max(data_term(:, 1))]);
+        set(gca, 'Color', [0.8 0.8 0.8]);
+        title('\mu || L ||_* + || L - I(u) ||_1');
+        legend('distance', '|| L - I(u) ||_1', '\mu || L ||_*', ...
+            'Location', 'SouthOutside', 'Orientation', 'Horizontal');
+    else
+        set(p1, 'XData', 1 : i, 'YData', data_term(1 : i, 1));
+        set(p2, 'XData', 1 : i, 'YData', data_term(1 : i, 2));
+        set(p3, 'XData', 1 : i, 'YData', data_term(1 : i, 3));
+        set(p4, 'XData', i, 'YData', data_term(i, 1));
+        set(p5, 'XData', i, 'YData', data_term(i, 2));
+        set(p6, 'XData', i, 'YData', data_term(i, 3));
+    end
     
     subplot(2, 3, 4);
     imagesc(...
