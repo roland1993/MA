@@ -41,7 +41,6 @@ vec = @(x) x(:);
 % directions of moving images (orthogonal)
 dir1 = randn(1, 2);             dir1 = dir1 / max(abs(dir1));
 dir2 = [dir1(2), -dir1(1)];
-% dir2 = randn(1, 2);  dir2 = dir2 / max(abs(dir2));
 
 % placeholders for shifted images
 numFrames = 101;
@@ -51,7 +50,7 @@ img3_u = zeros(m, n, numFrames);
 
 % get data term     mu * ||L||_* + ||L - I(u)||_1   by optimization over L
 %   -> set parameters for Chambolle-Pock scheme
-data_term = zeros(numFrames, numImg);
+data_term = zeros(numFrames, 3);
 theta = 1;
 K = speye(m * n * numImg);              norm_K = 1;
 tau = sqrt((1 - 1e-4) / norm_K ^ 2);    sigma = tau;
