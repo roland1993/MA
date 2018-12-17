@@ -32,7 +32,7 @@ function [x_star, y_star, primal_history,dual_history] = ...
 %   x_star          ~ n x 1         minimizer of primal problem
 %   y_star          ~ m x 1         maximizer of dual problem
 %   primal_history  ~ #iter x 3     history over all iterates of
-%                                       p(x_i), F(K*x_i) and G(x_i)                      
+%                                       p(x_i), F(K*x_i) and G(x_i)
 %   dual_history    ~ #iter x 3     history over all iterates of
 %                                       q(y_i), F(y_i) and G(-K'*y_i)
 

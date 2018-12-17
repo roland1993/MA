@@ -16,11 +16,12 @@ if exist('respfilm1gray.mat')
     
     % number of frames to use
     numImg = 4;
+    idx = floor(linspace(1, size(A, 3), numImg));
     
     % downsample frames
     img = cell(numImg, 1);
     for i = 1 : numImg
-        img{i} = conv2(A(:, :, i), ones(2) / 4);
+        img{i} = conv2(A(:, :, idx(i)), ones(2) / 4);
         img{i} = img{i}(2 : 2 : end, 2 : 2 : end);
     end
     
