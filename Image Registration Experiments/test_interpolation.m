@@ -19,7 +19,8 @@ colorbar;
 xlabel('---y-->');      ylabel('<--x---');
 
 % plot cell centered grid
-[x, y] = cell_centered_grid([m, n], h);
+omega = [0, m * h(1), 0, n * h(2)];
+[x, y] = cell_centered_grid(omega, [m, n]);
 p = [x(:), y(:)];
 plot_grid(reshape(p, [m, n, 2]), 1, 'g--o');
 title('image img with cell centered grid');

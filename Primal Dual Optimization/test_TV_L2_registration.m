@@ -75,7 +75,9 @@ F = @(v, c_flag) TV_registration(v, sigma, c_flag);
 
 figure('units', 'normalized', 'outerposition', [0 0 0.5 1]);
 colormap gray(256);
-[xx, yy] = cell_centered_grid([m, n], h);
+
+omega = [0, m * h(1), 0, n * h(2)];
+[xx, yy] = cell_centered_grid(omega, [m, n]);
 
 % perform optimization
 for i = 1 : numSteps

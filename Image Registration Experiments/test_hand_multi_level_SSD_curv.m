@@ -61,7 +61,8 @@ T_u_star = evaluate_displacement(...
     T_ML{num_levels}.img, T_ML{num_levels}.h, u_star);
 
 % compute grid g from displacement u
-[cc_x, cc_y] = cell_centered_grid([m, n], h);
+omega = [0, m * h(1), 0, n * h(2)];
+[cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
 g = [cc_x(:), cc_y(:)] + u_star;
 g = reshape(g, [m, n, 2]);
 
