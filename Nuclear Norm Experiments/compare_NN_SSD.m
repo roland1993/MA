@@ -23,35 +23,43 @@ if exist('respfilm1gray.mat')
     img2 = conv2(A(:, :, 2), ones(2) / 4);
     img2 = img2(2 : 2 : end, 2 : 2 : end);
     
+    
+    % get image resolution etc.
+    [m, n] = size(img1);
+    h_img = 1 ./ size(img1);
+    
 else
     error('Missing file: ''respfilm1gray.mat''!');
 end
 
-% get image resolution etc.
-[m, n] = size(img1);
-h = 1 ./ size(img1);
+% set evaluation region and grid step sizes
+omega = [-1, 2, -1, 2];
+h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 
 % column major vectorization operator
 vec = @(x) x(:);
 
 %% PRECOMPUTE DISPLACED IMAGES AND CORRESPONDING DATA TERM VALUES
 
+% evaluate img1 over omega
+img1 = evaluate_displacement(img1, h_img, zeros(m * n, 2), omega);
+
 % directions of moving image
 dir1 = randn(1, 2);             dir1 = dir1 / max(abs(dir1));
 
 % placeholders for shifted images
-numFrames = 101;
+numFrames = 51;
 t = linspace(-1, 1, numFrames);
 img2_u = zeros(m, n, numFrames);
 
 % get data term     mu * ||L||_* + ||L - I(u)||_1   by optimization over L
 %   -> set parameters for Chambolle-Pock scheme
 data_term = zeros(numFrames, 3);
-theta = 1;
+theta = 1;      maxIter = 200;      tol = 1e-5;
 K = speye(m * n * numImg);              norm_K = 1;
 tau = sqrt((1 - 1e-4) / norm_K ^ 2);    sigma = tau;
 L0 = zeros(m * n * numImg, 1);          P0 = L0;
-mu = 0.1;     G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
+mu = 6e1;     G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
 
 % placeholders for minimizers
 L1 = zeros(m, n, numFrames);
@@ -64,7 +72,7 @@ for i = 1 : numFrames
     
     % evaluation of displacements
     u1 = t(i) * ones(m * n, 2) .* dir1;
-    img2_u(:, :, i) = evaluate_displacement(img2, h, u1);
+    img2_u(:, :, i) = evaluate_displacement(img2, h_img, u1, omega);
     
     % optimization to find data term value
     I = [vec(img1), vec(img2_u(:, :, i))];
@@ -107,13 +115,13 @@ for i = 1 : numFrames
     
     subplot(2, 3, 1);
     imagesc(...
-        'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
-        'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
         'CData', img1);
     hold on;
     imagesc(...
-        'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
-        'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
         'CData', green, ...
         'AlphaData', 0.75 * img2_u(:, :, i));
     hold off;
@@ -158,14 +166,14 @@ for i = 1 : numFrames
     
     subplot(2, 3, 4);
     imagesc(...
-        'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
-        'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
         'CData', L1(:, :, i));
     
     subplot(2, 3, 5);
     imagesc(...
-        'YData', [h(1) * (1/2), h(1) * (m - (1/2))], ...
-        'XData', [h(2) * (1/2), h(2) * (n - (1/2))], ...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
         'CData', L2(:, :, i));
     
     drawnow;        pause(0.1);
