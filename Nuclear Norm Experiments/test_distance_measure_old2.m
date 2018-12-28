@@ -1,5 +1,4 @@
 %% CLEAN-UP + INITIALIZATION
-
 clear all, close all, clc;
 
 % make sure that interpolation routines are on search path
@@ -87,7 +86,7 @@ end
 
 %% PLOTTING
 
-% get numImg different colors
+% get different colors
 c_map = hsv(numImg - 1);
 C = cell(numImg - 1, 1);
 for i = 1 : numImg - 1

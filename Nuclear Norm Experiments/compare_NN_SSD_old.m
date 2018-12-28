@@ -23,7 +23,6 @@ if exist('respfilm1gray.mat')
     img2 = conv2(A(:, :, 2), ones(2) / 4);
     img2 = img2(2 : 2 : end, 2 : 2 : end);
     
-    
     % get image resolution etc.
     [m, n] = size(img1);
     h_img = 1 ./ size(img1);

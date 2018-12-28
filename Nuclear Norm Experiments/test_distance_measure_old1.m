@@ -30,17 +30,17 @@ if exist('respfilm1gray.mat')
     h_img = 1 ./ size(img1);
     
     % add some noise
-        eta = 0.02;
-        img1 = img1 + eta * randn([m, n]);
-        img2 = img2 + eta * randn([m, n]);
-        img3 = img3 + eta * randn([m, n]);
+    eta = 0.02;
+    img1 = img1 + eta * randn([m, n]);
+    img2 = img2 + eta * randn([m, n]);
+    img3 = img3 + eta * randn([m, n]);
     
 else
     error('Missing file: ''respfilm1gray.mat''!');
 end
 
 % set evaluation region and grid step sizes
-omega = [-1, 2, -1, 2]
+omega = [-1, 2, -1, 2];
 h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 
 % column major vectorization operator
