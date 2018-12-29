@@ -2,11 +2,13 @@
 
 clear all, close all, clc;
 
-[X, Y, Z] = ndgrid(-1 : 0.1 : 1, -1 : 0.1 : 1, -1 : 0.1 : 1);
+[X, Y, Z] = ndgrid(-1 : 0.02 : 1, -1 : 0.02 : 1, -1 : 0.02 : 1);
 P = [X(:), Y(:), Z(:)];
-idx = sum(abs(P), 2) <= 1;
+idx = abs(sum(abs(P), 2) - 1) <= 1e-3;
+P = P(idx, :);
+
 figure;
-scatter3(P(idx, 1), P(idx, 2), P(idx, 3), 'r.');
+scatter3(P(:, 1), P(:, 2), P(:, 3), 'r.');
 axis equal;
 
 Q = [...
@@ -30,7 +32,17 @@ L = [...
     ];
 
 q = rand(3, 1);
+while sum(abs(q)) <= 1
+    q = rand(3, 1);
+end
 r = l1ball_projection(q);
+fprintf('Distance ||q - Proj(q)||_2 = %.4f\n', ...
+    sqrt(sum((q - r) .^ 2)));
+
+% compare to minimum distance between q and a grid of surface points P
+surf_dist = sqrt(sum((P - q') .^ 2, 2));
+fprintf('Minimum distance to surface grid points = %.4f\n', ...
+    min(surf_dist));
 
 hold on;
 for i = 1 : size(L, 1)
