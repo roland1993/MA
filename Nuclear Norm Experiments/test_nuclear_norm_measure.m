@@ -16,10 +16,20 @@ end
 % select experiment
 fprintf('%sTESTING NUCLEAR NORM DISTANCE MEASURE%s\n', ...
     repmat('~', 21, 1), repmat('~', 22, 1));
+
+answer = [];
+while isempty(answer) || ~(answer == 1 || answer == 2)
+    fprintf('\nNUCLEAR AS:\n\n');
+    fprintf('\t1\tSOFT CONSTRAINT\n');
+    fprintf('\t2\tHARD CONSTRAINT\n\n');
+    answer = str2num(input('YOUR CHOICE: ','s'));
+end
+hard_constraint = (answer == 2);
+
 answer = [];
 while isempty(answer) || ...
         ~(answer == 1 || answer == 2 || answer == 3 || answer == 4)
-    fprintf('\nPLEASE CHOOSE EXPERIMENT FROM:\n\n');
+    fprintf('\nCHOOSE EXPERIMENT FROM:\n\n');
     fprintf('\t1\tTRANSLATION\n');
     fprintf('\t2\tROTATION\n');
     fprintf('\t3\tZOOMING\n');
@@ -71,6 +81,12 @@ if answer == 1
     % evaluate reference img{1} over omega
     img{1} = evaluate_displacement(img{1}, h_img, zeros(m * n, 2), omega);
     
+    % optimization parameters
+    mu = 60;
+    nu = 30;
+    tol = 5e-5;
+    maxIter = 200;
+    
 elseif answer == 2
     
     % standard image region for rotation
@@ -89,7 +105,15 @@ elseif answer == 2
     mask = reshape(tmp, [m, n]);
     %     mask = mvnpdf([xx(:), yy(:)], center, 0.02 * eye(2));
     %     mask = reshape(mask / max(mask), [m, n]);
-    for i = 1 : numImg, img{i} = img{i} .* mask; end
+    for i = 1 : numImg
+        img{i} = img{i} .* mask;
+    end
+    
+    % optimization parameters
+    mu = 100;
+    nu = 30;
+    tol = 5e-5;
+    maxIter = 200;
     
 elseif answer == 3
     
@@ -98,9 +122,15 @@ elseif answer == 3
     center = (omega([4, 2]) + omega([3, 1])) / 2;
     [xx, yy] = cell_centered_grid(omega, [m, n]);
     
+    % optimization parameters
+    mu = 100;
+    nu = 80;
+    tol = 1e-4;
+    maxIter = 200;
+    
 elseif answer == 4
     
-    % smaller image region
+    % enlarge image region
     omega = [-1, 2, -1, 2];
     center = (omega([4, 2]) + omega([3, 1])) / 2;
     [xx, yy] = cell_centered_grid(omega, [m, n]);
@@ -108,25 +138,32 @@ elseif answer == 4
     % evaluate reference img{1} over omega
     img{1} = evaluate_displacement(img{1}, h_img, zeros(m * n, 2), omega);
     
+    % optimization parameters
+    mu = 60;
+    nu = 30;
+    tol = 1e-4;
+    maxIter = 200;
+    
 end
 
 % get grid step sizes
 h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 
-% get data term     mu * ||L||_* + ||L - I(u)||_1   by optimization over L
+% get data term by optimization over L
 %   -> set parameters for Chambolle-Pock scheme
 data_term = zeros(numFrames, 3);
 theta = 1;
-maxIter = 200;
-tol = 5e-5;
 K = speye(m * n * numImg);
 norm_K = 1;
 tau = sqrt((1 - 1e-4) / norm_K ^ 2);
 sigma = tau;
 L0 = zeros(m * n * numImg, 1);
 P0 = L0;
-mu = 55;
-G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
+if hard_constraint
+    G = @(L, c_flag) nuclear_norm_constraint(L, numImg, tau, nu, c_flag);
+else
+    G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
+end
 
 % track SSD for comparison
 SSD = zeros(numFrames, 1);
@@ -153,33 +190,24 @@ for i = 1 : numFrames
         
         % warp image + store it
         if answer == 1
-            
             u = t(i) * ones(m * n, 2) .* dir(j, :);
-            
         elseif answer == 2
-            
             u = [xx(:), yy(:)] - center;
             alpha = t(i) * pi;
             u = u * [cos(alpha), sin(alpha); -sin(alpha), cos(alpha)];
             u = u + center;
             u = u - [xx(:), yy(:)];
-            
         elseif answer == 3
-            
             u = [xx(:), yy(:)] - center;
             u = (1 - t(i)) ^ 2 * u;
             u = u + center;
             u = u - [xx(:), yy(:)];
-            
         elseif answer == 4
-            
             u = [xx(:), yy(:)] - center;
             u(:, 2) = u(:, 2) + t(i) * u(:, 1);
             u = u + center;
             u = u - [xx(:), yy(:)];
-            
         end
-        
         img_u{j}(:, :, i) = ...
             evaluate_displacement(img{j + 1}, h_img, u, omega);
         
@@ -240,31 +268,35 @@ for i = 1 : numFrames
     
     subplot(2, 2, 2);
     if i == 1
-        
         p1 = plot(1 : i, data_term(1 : i, 1), 'y', 'LineWidth', 2);
         hold on;
-        p2 = plot(1 : i, data_term(1 : i, 2), '--m');
-        p3 = plot(1 : i, data_term(1 : i, 3), '--g');
         p4 = plot(i, data_term(i, 1), 'ro');
-        p5 = plot(i, data_term(i, 2), 'ro');
-        p6 = plot(i, data_term(i, 3), 'ro');
+        if ~hard_constraint
+            p2 = plot(1 : i, data_term(1 : i, 2), '--m');
+            p3 = plot(1 : i, data_term(1 : i, 3), '--g');
+            p5 = plot(i, data_term(i, 2), 'ro');
+            p6 = plot(i, data_term(i, 3), 'ro');
+        end
         hold off;
         xlim([1, numFrames]);
         ylim([0, 1.25 * max(data_term(:, 1))]);
         set(gca, 'Color', 0.6 * ones(3, 1));
-        title('\mu || L ||_* + || L - I(u) ||_1');
-        legend('distance', '|| L - I(u) ||_1', '\mu || L ||_*', ...
-            'Location', 'SouthOutside', 'Orientation', 'Horizontal');
-        
+        if hard_constraint
+            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu}');
+        else
+            title('\mu || L ||_* + || L - I(u) ||_1');
+            legend('distance', '|| L - I(u) ||_1', '\mu || L ||_*', ...
+                'Location', 'SouthOutside', 'Orientation', 'Horizontal');
+        end
     else
-        
         set(p1, 'XData', 1 : i, 'YData', data_term(1 : i, 1));
-        set(p2, 'XData', 1 : i, 'YData', data_term(1 : i, 2));
-        set(p3, 'XData', 1 : i, 'YData', data_term(1 : i, 3));
         set(p4, 'XData', i, 'YData', data_term(i, 1));
-        set(p5, 'XData', i, 'YData', data_term(i, 2));
-        set(p6, 'XData', i, 'YData', data_term(i, 3));
-        
+        if ~hard_constraint
+            set(p2, 'XData', 1 : i, 'YData', data_term(1 : i, 2));
+            set(p3, 'XData', 1 : i, 'YData', data_term(1 : i, 3));
+            set(p5, 'XData', i, 'YData', data_term(i, 2));
+            set(p6, 'XData', i, 'YData', data_term(i, 3));
+        end
     end
     
     subplot(2, 2, 3);
@@ -289,7 +321,9 @@ for i = 1 : numFrames
         r2 = plot(i, TV(i), 'ro');
         hold off;
         xlim([1, numFrames]);
-        if max(TV) > 0, ylim([0, 1.25 * max(TV)]); end
+        if max(TV) > 0
+            ylim([0, 1.25 * max(TV)]);
+        end
         set(gca, 'Color', 0.6 * ones(3, 1));
         title('TV || \nablau ||_1');
     else
@@ -297,6 +331,7 @@ for i = 1 : numFrames
         set(r2, 'XData', i, 'YData', TV(i));
     end
     
-    drawnow;        pause(0.1);
+    drawnow;
+    pause(0.1);
     
 end

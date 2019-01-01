@@ -51,7 +51,7 @@ else
     % OR ~> evaluate NN* and Prox_[NN*] at L
     
     % [mu * f(.)]* = mu * f*(. / mu)
-    L = L(:) / mu;
+    L = L / mu;
     
     % compute svd of L
     [~, S, ~] = svd(L, 'econ');
@@ -60,13 +60,15 @@ else
     % conjugate of NN = conjugate of 1-norm (on S)
     %   -> indicator d_{||.||_inf <= 1}(S)
     res1 = mu * 0;
-    if max(S) > 1, res3 = max(S) - 1; end
+    if max(S) > 1
+        res3 = max(S) - 1;
+    end
     
     % compute prox-step for NN* with Moreau's identity (if requested)
     if nargout == 2
-        [~, prox] = nuclear_norm(L / (mu * tau), numImg, ...
+        [~, prox] = nuclear_norm(L(:) / (mu * tau), numImg, ...
             1 / tau, 1 / mu, false);
-        res2 = L - mu * tau * prox;
+        res2 = L(:) - mu * tau * prox;
     else
         res2 = [];
     end
