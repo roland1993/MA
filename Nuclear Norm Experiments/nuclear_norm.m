@@ -51,7 +51,7 @@ else
     % OR ~> evaluate NN* and Prox_[NN*] at L
     
     % [mu * f(.)]* = mu * f*(. / mu)
-    L = L / mu;
+    L = L(:) / mu;
     
     % compute svd of L
     [~, S, ~] = svd(L, 'econ');
