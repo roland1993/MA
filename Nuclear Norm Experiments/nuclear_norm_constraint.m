@@ -40,7 +40,7 @@ if ~conjugate_flag
     end
     
     % get prox operator via Moreau's identity (if requested)
-    if nargout == 2
+    if nargout >= 2
         [~, conj_prox] = ...
             nuclear_norm_constraint(L(:) / tau, numImg, 1 / tau, nu, true);
         res2 = L(:) - tau * conj_prox;
@@ -58,7 +58,7 @@ else
     res1 = nu * max(S);
     
     % compute prox of spectral norm via prox of inf-norm of sv-vector S
-    if nargout == 2
+    if nargout >= 2
         
         % nu and tau in one factor
         mu = nu * tau;

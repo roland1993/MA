@@ -26,7 +26,7 @@ if ~conjugate_flag
     % compute SAD
     res1 = sum(abs(L - I));
     
-    if nargout == 2
+    if nargout >= 2
         
         % prox-step for ||L - I||_1 =: SAD ~> pointwise shrinkage
         res2 = zeros(size(L));
@@ -52,7 +52,7 @@ else
     res1 = L' * I;
     
     % compute prox-step for SAD* with Moreau's identity (if requested)
-    if nargout == 2
+    if nargout >= 2
         [~, prox] = SAD(L / sigma, I, 1 / sigma, false);
         res2 = L - sigma * prox;
     else
