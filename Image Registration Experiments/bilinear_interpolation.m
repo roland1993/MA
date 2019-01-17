@@ -1,9 +1,8 @@
-function [img_p, dimg_p] = bilinear_interpolation(img, h, p, omega)
+function [img_p, dimg_p] = bilinear_interpolation(img, h, p)
 % IN:
 %   img         ~ m x n     image
 %   h           ~ 2 x 1     image step sizes [h_x, h_y]
-%   p           ~ l x 2     evaluation points (in omega-coordinates)
-%   omega       ~ 1 x 4     coordinate frame of p (scaled like xy-system!)
+%   p           ~ l x 2     evaluation points (in xy-coordinates)
 % OUT:
 %   img_p       ~ l x 1     bilinear interpolation of img at points p
 %   dimg_p      ~ l x 2     x-/y-derivative of interpol(img) at points p
@@ -11,14 +10,6 @@ function [img_p, dimg_p] = bilinear_interpolation(img, h, p, omega)
 % get some more parameters
 [m, n] = size(img);
 l = size(p, 1);
-
-% default coordinate frame for p is omega = [0, m * h_x] x [0, n * h_y]
-if nargin < 4
-    omega = [0, m * h(1), 0, n * h(2)];
-end
-
-% switch from omega coordinates to xy-coordinates
-p = [p(:, 1) + omega(1), p(:, 2) + omega(3)];
 
 % use homogeneous coordinates for p
 p = [p, ones(size(p(:, 1)))];
