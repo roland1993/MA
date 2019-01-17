@@ -8,44 +8,97 @@ if ~exist('evaluate_displacement.m', 'file')
     addpath(genpath('..'));
 end
 
-% load respiratory data if available
-if ~exist('respfilm1gray.mat', 'file')
-    error('Missing file: ''respfilm1gray.mat''!');
-end
+% ~~~~~~~ RESPIRATORY DATA ~~~~~~~
+% % load respiratory data if available
+% if ~exist('respfilm1gray.mat', 'file')
+%     error('Missing file: ''respfilm1gray.mat''!');
+% end
+% 
+% % load film and normalize to [0 1]
+% load('respfilm1gray.mat', 'A');
+% A = (A - min(A(:))) / (max(A(:)) - min(A(:)));
+% 
+% % k = number of template frames
+% k = 2;
+% idx = floor(linspace(1, size(A, 3), k + 1));
+% 
+% % downsample frames
+% img = cell(k + 1, 1);
+% for i = 1 : k + 1
+%     img{i} = conv2(A(:, :, idx(i)), ones(4) / 16, 'same');
+%     img{i} = img{i}(1 : 4 : end, 1 : 4 : end);
+% end
 
+% ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
 
-% load film and normalize to [0 1]
-load('respfilm1gray.mat', 'A');
-A = (A - min(A(:))) / (max(A(:)) - min(A(:)));
+m = 32;
+n = 32;
+numFrames = 9;
+ex = 3;
+A = createTestImage(m, n, numFrames, ex);
 
-% k = number of template frames
 k = 2;
-idx = floor(linspace(1, size(A, 3), k + 1));
-
-% downsample frames
+idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
 img = cell(k + 1, 1);
 for i = 1 : k + 1
-    img{i} = conv2(A(:, :, idx(i)), ones(4) / 16, 'same');
-    img{i} = img{i}(1 : 4 : end, 1 : 4 : end);
+    img{i} = A(:, :, idx(i));
 end
 
 % get image resolution etc.
 [m, n] = size(img{1});
 h_img = 1 ./ size(img{1});
-omega = [-0.25, 1.25, -0.25, 1.25];
+omega = [0, 1, 0, 1];
 h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 
-% choose reference image
+% choose reference and template images
+T = zeros(m, n, k);
+for i = 1 : k
+    T(:, :, i) = ...
+        evaluate_displacement(img{i}, h_img, zeros(m * n, 2), omega);
+end
 R = evaluate_displacement(img{k + 1}, h_img, zeros(m * n, 2), omega);
-img(k + 1) = [];
 
 % column major vectorization operator
 vec = @(x) x(:);
 
 %% OPTIMIZATION SCHEME
 
-% development point for 1st order approximation of image model
-u0 = zeros(m * n, 2, k);
+% optimization parameters
+theta = 1;
+maxIter = 10000;
+tol = 1e0;
+
+% initialize primary and dual variables
+x = zeros((3 * k + 1) * m * n, 1);
+p = zeros((5 * k + 1) * m * n, 1);
+
+% regularization strength
+mu = 1e0;
+
+% estimate threshold parameter nu from nuclear norm of column-wise images
+[~, S, ~] = svd([reshape(T, m * n, k), vec(R)], 'econ');
+nu = 0.85 * sum(diag(S));
+
+% lower left block of A ~> gradient operator on displacements u
+Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
+Dx(m, m) = 0;
+Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
+Dy(n, n) = 0;
+D = kron(speye(2), [kron(speye(n), Dx); kron(Dy, speye(m))]);
+A2 = kron(speye(k), D);
+
+% upper right block of A ~> identity matrix
+A3 = speye((k + 1) * m * n);
+
+% lower right block of A ~> all zeros
+A4 = sparse(4 * k * m * n, (k + 1) * m * n);
+
+%-------------------------------------------------------------------------%
+% BEGIN OUTER ITERATION
+
+% fetch u-part from primary variables
+u0 = x(1 : 2 * k * m * n);
+u0 = reshape(u0, m * n, 2, k);
 
 % reference vector for computing SAD from L
 b = zeros((k + 1) * m * n, 1);
@@ -54,71 +107,40 @@ b(k * m * n + 1 : end) = vec(R);
 % store image gradients of template images, complete vector b
 dT = cell(k, 1);
 for i = 1 : k
-    [T, dT{i}] = ...
+    [T_i, dT{i}] = ...
         evaluate_displacement(img{i}, h_img, u0(:, :, i), omega);
     b((i - 1) * m * n + 1 : i * m * n) = ...
-        vec(T) - dT{i} * vec(u0(:, :, i));
+        vec(T_i) - dT{i} * vec(u0(:, :, i));
 end
 
-% estimate threshold parameter nu from nuclear norm of 
-%   matrix of column-wise images (constructed from vector b)
-[~, S, ~] = svd(reshape(b, m * n, k + 1), 'econ');
-nu = 0.85 * sum(diag(S));
-
 % upper left block of A ~> template image gradients
-A1 = blkdiag(dT{:});
-[i, j, v] = find(A1);
-A1 = sparse(i, j, v, (k + 1) * m * n, 2 * k * m * n);
-% A1 = sparse((k + 1) * m * n, 2 * k * m * n);
-
-% lower left block of A ~> gradient operator for grids u
-Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
-Dx(m, m) = 0;
-Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
-Dy(n, n) = 0;
-D = kron(speye(2), [kron(speye(n), Dx); kron(Dy, speye(m))]);
-A2 = kron(speye(k), D);
-% A2 = sparse(4 * k * m * n, 2 * k * m * n);
-
-% upper right block of A ~> identity matrix
-A3 = speye((k + 1) * m * n);
-
-% lower right block of A ~> all zeros
-A4 = sparse(4 * k * m * n, (k + 1) * m * n);
-
+A1 = [      -blkdiag(dT{:})
+        sparse(m * n, 2 * k * m * n)    ];
+    
 % build up A from the computed blocks
 A = [       A1,     A3
             A2,     A4          ];
 
 % estimate (squared) spectral norm of A via simple upper bound
-% norm_A_squared = max(sum(abs(A), 1)) * max(sum(abs(A), 2));
 norm_A_est = normest(A);
 
 % use estimated norm to get primal and dual step sizes
-% tau = sqrt((1 - 1e-4) / norm_A_squared);
 tau = sqrt(0.95 / norm_A_est ^ 2);
 sigma = sqrt(0.95 / norm_A_est ^ 2);
 
 % get function handle to G-part of target function
 G_handle = @(x, c_flag) G(x, k + 1, tau, nu, c_flag);
 
-% regularization strength
-mu = 1;
-
 % get function handle to F-part of target function
-F_handle =  @(y, c_flag) F(y, b, k + 1, mu, sigma, c_flag);
-
-% miscellaneous optimization parameters
-theta = 1;
-x0 = zeros((3 * k + 1) * m * n, 1);
-p0 = zeros((5 * k + 1) * m * n, 1);
-maxIter = 10000;
-tol = 1e0;
+F_handle = @(y, c_flag) F(y, b, k + 1, mu, sigma, c_flag);
 
 % perform optimization
-[x_star, y_star, primal_history, dual_history] = ...
-    chambolle_pock(F_handle, G_handle, A, x0, p0, ...
+[x_star, p_star, primal_history, dual_history] = ...
+    chambolle_pock(F_handle, G_handle, A, x, p, ...
     theta, tau, sigma, maxIter, tol);
+
+% END OUTER ITERATION
+%-------------------------------------------------------------------------%
 
 %% SOME OUTPUT
 
@@ -166,19 +188,18 @@ legend({'-[F*(y) + G*(-K*y)]', '-F*(y)', '-G*(-K*y)'}, ...
 % evaluate minimizer x_star = [u_star; L_star]
 u_star = x_star(1 : 2 * k * m * n);
 u_star = reshape(u_star, m * n, 2, k);
+T_u = zeros(m, n, k);
+for i = 1 : k
+    T_u(:, :, i) = ...
+        evaluate_displacement(img{i}, h_img, u_star(:, :, i), omega);
+end
+
 L_star = x_star(2 * k * m * n + 1 : end);
 L_star = reshape(L_star, m, n, k + 1);
 
 % get cell-centered grid over omega for plotting purposes
 [cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
 cc_grid = [cc_x(:), cc_y(:)];
-
-% only display the longest 50% of displacement vectors
-u_star_length = squeeze(sqrt(sum(u_star .^ 2, 2)));
-q1 = quantile(u_star_length(:, 1), 0.5);
-idx1 = (u_star_length(:, 1) >= q1);
-q2 = quantile(u_star_length(:, 2), 0.5);
-idx2 = (u_star_length(:, 2) >= q2);
 
 % display resulting displacements & low rank components
 figure('units', 'normalized', 'outerposition', [0 0 1 1]);
@@ -189,13 +210,13 @@ set(gca, 'YDir', 'reverse');
 imagesc(...
     'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
     'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', evaluate_displacement(img{1}, h_img, zeros(m * n, 2), omega));
+    'CData', T(:, :, 1));
 axis image;
 title('template T_1');
 
 hold on;
-quiver(cc_grid(idx1, 2), cc_grid(idx1, 1), ...
-    u_star(idx1, 2, 1), u_star(idx1, 1, 1), 0, 'b');
+quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+    u_star(:, 2, 1), u_star(:, 1, 1), 0, 'r');
 hold off;
 
 subplot(3, 3, 2);
@@ -203,13 +224,13 @@ set(gca, 'YDir', 'reverse');
 imagesc(...
     'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
     'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', evaluate_displacement(img{2}, h_img, zeros(m * n, 2), omega));
+    'CData', T(:, :, 2));
 axis image;
 title('template T_2');
 
 hold on;
-quiver(cc_grid(idx2, 2), cc_grid(idx2, 1), ...
-    u_star(idx2, 2, 2), u_star(idx2, 1, 2), 0, 'b');
+quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+    u_star(:, 2, 2), u_star(:, 1, 2), 0, 'r');
 hold off;
 
 subplot(3, 3, 3);
@@ -226,7 +247,7 @@ set(gca, 'YDir', 'reverse');
 imagesc(...
     'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
     'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', evaluate_displacement(img{1}, h_img, u_star(:, :, 1), omega));
+    'CData', T_u(:, :, 1));
 axis image;
 title('T_1(u_1)');
 
@@ -235,7 +256,7 @@ set(gca, 'YDir', 'reverse');
 imagesc(...
     'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
     'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', evaluate_displacement(img{2}, h_img, u_star(:, :, 2), omega));
+    'CData', T_u(:, :, 2));
 axis image;
 title('T_2(u_2)');
 
