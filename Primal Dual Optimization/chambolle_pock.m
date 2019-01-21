@@ -106,7 +106,7 @@ fprintf('\n');
 while true
     
     % first stopping criterion
-    if i == maxIter
+    if (i == maxIter)
         break;
     end
     
@@ -129,22 +129,22 @@ while true
     % get x_{n+1} = [(id + tau dG)^(-1)](x_n - tau * K' * y_{n+1})
     [~, x_current] = G(x_current - tau * (K' * y_current), false);
     
-    % get output based on convergence of cesaro mean
-    if i == 1
-        x_star = x_current;
-        y_star = y_current;
-    else
-        x_star = ((i - 1) / i) * x_star + (1 / i) * x_current;
-        y_star = ((i - 1) / i) * y_star + (1 / i) * y_current;
-    end
+%     % get output based on convergence of cesaro mean
+%     if i == 1
+%         x_star = x_current;
+%         y_star = y_current;
+%     else
+%         x_star = ((i - 1) / i) * x_star + (1 / i) * x_current;
+%         y_star = ((i - 1) / i) * y_star + (1 / i) * y_current;
+%     end
     
     % record primal and dual objective value for current iterates
     [F_history(i + 1), G_history(i + 1), F_con, G_con] = ...
-        primal_objective(x_star);
+        primal_objective(x_current);    % primal_objective(x_star);
     primal_history(i + 1) = G_history(i + 1) + F_history(i + 1);
     
     [FStar_history(i + 1), GStar_history(i + 1), FS_con, GS_con] = ...
-        dual_objective(y_star);
+        dual_objective(y_current);      % dual_objective(y_star);
     dual_history(i + 1) = -(GStar_history(i + 1) + FStar_history(i + 1));
     
     % x_bar_{n+1} = x_{n+1} + theta * (x_{n+1} - x_n)
@@ -184,8 +184,8 @@ else
 end
 
 % return last iterates
-% x_star = x_current;
-% y_star = y_current;
+x_star = x_current;
+y_star = y_current;
 
 % incorporate F_history, G_history into primal_history (conjugates as well)
 primal_history = [primal_history, F_history, G_history];
