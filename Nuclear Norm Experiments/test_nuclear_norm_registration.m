@@ -30,24 +30,24 @@ end
 % end
 
 % ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
-
 m = 32;
 n = 32;
-numFrames = 9;
+numFrames = 7;
 ex = 3;
 A = createTestImage(m, n, numFrames, ex);
 
-k = 2;
+k = 3;
 idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
 img = cell(k + 1, 1);
 for i = 1 : k + 1
     img{i} = A(:, :, idx(i));
 end
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % get image resolution etc.
 [m, n] = size(img{1});
-h_img = 1 ./ size(img{1});
-omega = [0, 1, 0, 1];
+h_img = [1, 1];
+omega = [0, m, 0, n];
 h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 
 % choose reference and template images
@@ -65,8 +65,9 @@ vec = @(x) x(:);
 
 % optimization parameters
 theta = 1;
-maxIter = 10000;
-tol = 1e0;
+maxIter = 1500;
+tol = 0;
+outerIter = 10;
 
 % initialize primary and dual variables
 x = zeros((3 * k + 1) * m * n, 1);
@@ -74,10 +75,6 @@ p = zeros((5 * k + 1) * m * n, 1);
 
 % regularization strength
 mu = 1e0;
-
-% estimate threshold parameter nu from nuclear norm of column-wise images
-[~, S, ~] = svd([reshape(T, m * n, k), vec(R)], 'econ');
-nu = 0.85 * sum(diag(S));
 
 % lower left block of A ~> gradient operator on displacements u
 Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
@@ -93,54 +90,62 @@ A3 = speye((k + 1) * m * n);
 % lower right block of A ~> all zeros
 A4 = sparse(4 * k * m * n, (k + 1) * m * n);
 
+for o = 1 : outerIter
 %-------------------------------------------------------------------------%
 % BEGIN OUTER ITERATION
-
-% fetch u-part from primary variables
-u0 = x(1 : 2 * k * m * n);
-u0 = reshape(u0, m * n, 2, k);
-
-% reference vector for computing SAD from L
-b = zeros((k + 1) * m * n, 1);
-b(k * m * n + 1 : end) = vec(R);
-
-% store image gradients of template images, complete vector b
-dT = cell(k, 1);
-for i = 1 : k
-    [T_i, dT{i}] = ...
-        evaluate_displacement(img{i}, h_img, u0(:, :, i), omega);
-    b((i - 1) * m * n + 1 : i * m * n) = ...
-        vec(T_i) - dT{i} * vec(u0(:, :, i));
-end
-
-% upper left block of A ~> template image gradients
-A1 = [      -blkdiag(dT{:})
-        sparse(m * n, 2 * k * m * n)    ];
     
-% build up A from the computed blocks
-A = [       A1,     A3
-            A2,     A4          ];
-
-% estimate (squared) spectral norm of A via simple upper bound
-norm_A_est = normest(A);
-
-% use estimated norm to get primal and dual step sizes
-tau = sqrt(0.95 / norm_A_est ^ 2);
-sigma = sqrt(0.95 / norm_A_est ^ 2);
-
-% get function handle to G-part of target function
-G_handle = @(x, c_flag) G(x, k + 1, tau, nu, c_flag);
-
-% get function handle to F-part of target function
-F_handle = @(y, c_flag) F(y, b, k + 1, mu, sigma, c_flag);
-
-% perform optimization
-[x_star, p_star, primal_history, dual_history] = ...
-    chambolle_pock(F_handle, G_handle, A, x, p, ...
-    theta, tau, sigma, maxIter, tol);
-
+    % fetch u-part from primary variables
+    u0 = x(1 : 2 * k * m * n);
+    u0 = reshape(u0, m * n, 2, k);
+    
+    % reference vector for computing SAD from L
+    b = zeros((k + 1) * m * n, 1);
+    b(k * m * n + 1 : end) = vec(R);
+    
+    % templates evaluated using current u
+    T_current = zeros(m, n, k);
+    
+    % store image gradients of template images, complete vector b
+    dT = cell(k, 1);
+    for i = 1 : k
+        [T_current(:, :, i), dT{i}] = ...
+            evaluate_displacement(img{i}, h_img, u0(:, :, i), omega);
+        b((i - 1) * m * n + 1 : i * m * n) = ...
+            vec(T_current(:, :, i)) - dT{i} * vec(u0(:, :, i));
+    end
+    
+    % estimate threshold nu from nuclear norm of column-wise images
+    [~, S, ~] = svd([reshape(T_current, m * n, k), vec(R)], 'econ');
+    nu = 0.85 * sum(diag(S));
+    
+    % upper left block of A ~> template image gradients
+    A1 = [      -blkdiag(dT{:})
+            sparse(m * n, 2 * k * m * n)    ];
+    
+    % build up A from the computed blocks
+    A = [       A1,     A3
+                A2,     A4          ];
+    
+    % estimate (squared) spectral norm of A via simple upper bound
+    norm_A_est = normest(A);
+    
+    % use estimated norm to get primal and dual step sizes
+    tau = sqrt(0.95 / norm_A_est ^ 2);
+    sigma = sqrt(0.95 / norm_A_est ^ 2);
+    
+    % get function handle to G-part of target function
+    G_handle = @(x, c_flag) G(x, k + 1, tau, nu, c_flag);
+    
+    % get function handle to F-part of target function
+    F_handle = @(y, c_flag) F(y, b, k + 1, mu, sigma, c_flag);
+    
+    % perform optimization
+    [x, p, primal_history, dual_history] = chambolle_pock(...
+        F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
+    
 % END OUTER ITERATION
 %-------------------------------------------------------------------------%
+end
 
 %% SOME OUTPUT
 
@@ -186,6 +191,8 @@ legend({'-[F*(y) + G*(-K*y)]', '-F*(y)', '-G*(-K*y)'}, ...
     'Orientation', 'Horizontal');
 
 % evaluate minimizer x_star = [u_star; L_star]
+x_star = x;
+p_star = p;
 u_star = x_star(1 : 2 * k * m * n);
 u_star = reshape(u_star, m * n, 2, k);
 T_u = zeros(m, n, k);
@@ -205,35 +212,25 @@ cc_grid = [cc_x(:), cc_y(:)];
 figure('units', 'normalized', 'outerposition', [0 0 1 1]);
 colormap gray(256);
 
-subplot(3, 3, 1);
-set(gca, 'YDir', 'reverse');
-imagesc(...
-    'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-    'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', T(:, :, 1));
-axis image;
-title('template T_1');
+for i = 1 : k
+    
+    subplot(3, k + 1, i);
+    set(gca, 'YDir', 'reverse');
+    imagesc(...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+        'CData', T(:, :, i));
+    axis image;
+    title(sprintf('template T_%d', i));
+    
+    hold on;
+    quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+        u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
+    hold off;
+    
+end
 
-hold on;
-quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-    u_star(:, 2, 1), u_star(:, 1, 1), 0, 'r');
-hold off;
-
-subplot(3, 3, 2);
-set(gca, 'YDir', 'reverse');
-imagesc(...
-    'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-    'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', T(:, :, 2));
-axis image;
-title('template T_2');
-
-hold on;
-quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-    u_star(:, 2, 2), u_star(:, 1, 2), 0, 'r');
-hold off;
-
-subplot(3, 3, 3);
+subplot(3, k + 1, k + 1);
 set(gca, 'YDir', 'reverse');
 imagesc(...
     'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
@@ -242,26 +239,21 @@ imagesc(...
 axis image;
 title('reference R');
 
-subplot(3, 3, 4);
-set(gca, 'YDir', 'reverse');
-imagesc(...
-    'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-    'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', T_u(:, :, 1));
-axis image;
-title('T_1(u_1)');
+for i = 1 : k
 
-subplot(3, 3, 5);
-set(gca, 'YDir', 'reverse');
-imagesc(...
-    'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-    'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', T_u(:, :, 2));
-axis image;
-title('T_2(u_2)');
+    subplot(3, k + 1, (k + 1) + i);
+    set(gca, 'YDir', 'reverse');
+    imagesc(...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+        'CData', T_u(:, :, i));
+    axis image;
+    title(sprintf('T_%d(u_%d)', i, i));
+    
+end
 
-for i = 1 : 3
-    subplot(3, 3, 6 + i);
+for i = 1 : (k + 1)
+    subplot(3, k + 1, 2 * (k + 1) + i);
     set(gca, 'YDir', 'reverse');
     imagesc(...
         'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
