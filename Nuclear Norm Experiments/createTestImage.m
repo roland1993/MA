@@ -45,7 +45,7 @@ switch ex
         
         [x,y]=meshgrid(linspace(-1,1,m),linspace(-1,1,n));
         s1 = 0.1;
-        s2 = 0.005;
+        s2 = 0.05;
         
         % translation + intesity change
         tt = linspace(-0.5,0.5,nframes);
