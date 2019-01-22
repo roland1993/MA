@@ -8,6 +8,10 @@ if ~exist('evaluate_displacement.m', 'file')
     addpath(genpath('..'));
 end
 
+% some local function definitions
+vec = @(x) x(:);
+normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
+
 % ~~~~~~~ RESPIRATORY DATA ~~~~~~~
 % % load respiratory data if available
 % if ~exist('respfilm1gray.mat', 'file')
@@ -29,20 +33,26 @@ end
 %     img{i} = img{i}(1 : 4 : end, 1 : 4 : end);
 % end
 
-% ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
-m = 32;
-n = 32;
-numFrames = 7;
-ex = 3;
-A = createTestImage(m, n, numFrames, ex);
+% % ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
+% m = 32;
+% n = 32;
+% numFrames = 7;
+% ex = 1;
+% A = createTestImage(m, n, numFrames, ex);
+% 
+% k = 3;
+% idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
+% img = cell(k + 1, 1);
+% for i = 1 : k + 1
+%     img{i} = A(:, :, idx(i));
+% end
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-k = 3;
-idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
-img = cell(k + 1, 1);
-for i = 1 : k + 1
-    img{i} = A(:, :, idx(i));
-end
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+k = 1;
+img{1} = double(rgb2gray(imread('sr1.png')));
+img{1} = normalize(img{1});
+img{2} = double(rgb2gray(imread('sr2.png')));
+img{2} = normalize(img{2});
 
 % get image resolution etc.
 [m, n] = size(img{1});
@@ -58,23 +68,20 @@ for i = 1 : k
 end
 R = evaluate_displacement(img{k + 1}, h_img, zeros(m * n, 2), omega);
 
-% column major vectorization operator
-vec = @(x) x(:);
-
 %% OPTIMIZATION SCHEME
 
 % optimization parameters
 theta = 1;
-maxIter = 1500;
+maxIter = 1000;
 tol = 0;
-outerIter = 10;
+outerIter = 5;
 
 % initialize primary and dual variables
 x = zeros((3 * k + 1) * m * n, 1);
 p = zeros((5 * k + 1) * m * n, 1);
 
 % regularization strength
-mu = 1e0;
+mu = 1e-1;
 
 % lower left block of A ~> gradient operator on displacements u
 Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
@@ -89,6 +96,12 @@ A3 = speye((k + 1) * m * n);
 
 % lower right block of A ~> all zeros
 A4 = sparse(4 * k * m * n, (k + 1) * m * n);
+
+% prepare figures for output display
+figure(1);
+set(gcf, 'units', 'normalized', 'outerposition', [0 0.5 1 0.5]);
+figure(2);
+set(gcf, 'units', 'normalized', 'outerposition', [0 0 1 1]);
 
 for o = 1 : outerIter
 %-------------------------------------------------------------------------%
@@ -116,7 +129,7 @@ for o = 1 : outerIter
     
     % estimate threshold nu from nuclear norm of column-wise images
     [~, S, ~] = svd([reshape(T_current, m * n, k), vec(R)], 'econ');
-    nu = 0.85 * sum(diag(S));
+    nu = 0.95 * sum(diag(S));
     
     % upper left block of A ~> template image gradients
     A1 = [      -blkdiag(dT{:})
@@ -143,124 +156,134 @@ for o = 1 : outerIter
     [x, p, primal_history, dual_history] = chambolle_pock(...
         F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
     
+    %% ITERATIVE OUTPUT
+    
+    % plot primal & dual energies
+    figure(1);
+    clf;
+    
+    subplot(1, 3, 1);
+    hold on;
+    plot(primal_history(:, 1), 'LineWidth', 1.5);
+    plot(dual_history(:, 1), 'LineWidth', 1.5);
+    hold off;
+    axis tight;
+    grid on;
+    xlabel('#iter');
+    legend({'primal energy', 'dual energy'}, ...
+        'FontSize', 12, 'Location', 'SouthOutside', ...
+        'Orientation', 'Horizontal');
+    
+    subplot(1, 3, 2);
+    hold on;
+    plot(primal_history(:, 1), 'LineWidth', 1.5);
+    plot(primal_history(:, 2), '--', 'LineWidth', 1.5);
+    plot(primal_history(:, 3), '--', 'LineWidth', 1.5);
+    hold off;
+    axis tight;
+    grid on;
+    xlabel('#iter');
+    legend({'F(Kx) + G(x)', 'F(Kx)', 'G(x)'}, ...
+        'FontSize', 12, 'Location', 'SouthOutside', ...
+        'Orientation', 'Horizontal');
+    
+    subplot(1, 3, 3);
+    hold on;
+    plot(dual_history(:, 1), 'LineWidth', 1.5);
+    plot(-dual_history(:, 2), '--', 'LineWidth', 1.5);
+    plot(-dual_history(:, 3), '--', 'LineWidth', 1.5);
+    hold off;
+    axis tight;
+    grid on;
+    xlabel('#iter');
+    legend({'-[F*(y) + G*(-K*y)]', '-F*(y)', '-G*(-K*y)'}, ...
+        'FontSize', 12, 'Location', 'SouthOutside', ...
+        'Orientation', 'Horizontal');
+    
+    % evaluate minimizer x_star = [u_star; L_star]
+    x_star = x;
+    p_star = p;
+    u_star = x_star(1 : 2 * k * m * n);
+    u_star = reshape(u_star, m * n, 2, k);
+    T_u = zeros(m, n, k);
+    for i = 1 : k
+        T_u(:, :, i) = ...
+            evaluate_displacement(img{i}, h_img, u_star(:, :, i), omega);
+    end
+    
+    L_star = x_star(2 * k * m * n + 1 : end);
+    L_star = reshape(L_star, m, n, k + 1);
+    
+    % get cell-centered grid over omega for plotting purposes
+    [cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
+    cc_grid = [cc_x(:), cc_y(:)];
+    
+    % display resulting displacements & low rank components
+    figure(2);
+    clf;
+    colormap gray(256);
+    
+    for i = 1 : k
+        
+        subplot(3, k + 1, i);
+        set(gca, 'YDir', 'reverse');
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', T(:, :, i));
+        axis image;
+        title(sprintf('template T_%d', i));
+        
+        hold on;
+        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+            u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
+        hold off;
+        
+    end
+    
+    subplot(3, k + 1, k + 1);
+    set(gca, 'YDir', 'reverse');
+    imagesc(...
+        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+        'CData', R);
+    axis image;
+    title('reference R');
+    
+    for i = 1 : k
+        
+        subplot(3, k + 1, (k + 1) + i);
+        set(gca, 'YDir', 'reverse');
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', T_u(:, :, i));
+        axis image;
+        title(sprintf('T_%d(u_%d)', i, i));
+        
+    end
+    
+    for i = 1 : (k + 1)
+        subplot(3, k + 1, 2 * (k + 1) + i);
+        set(gca, 'YDir', 'reverse');
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', L_star(:, :, i));
+        axis image;
+        title(sprintf('low rank component l_%d', i));
+    end
+    
+    % press key to continue
+    if o < outerIter
+        str = [sprintf('%s ITERATION #%d FINISHED %s\n\n', ...
+            repmat('~', [1, 10]), o, repmat('~', [1, 10])), ...
+            'PRESS ENTER TO CONTINUE: '];
+        input(str);
+    end
+    
 % END OUTER ITERATION
 %-------------------------------------------------------------------------%
-end
-
-%% SOME OUTPUT
-
-% plot primal & dual energies
-figure('units', 'normalized', 'outerposition', [0 0.5 1 0.5])
-
-subplot(1, 3, 1);
-hold on;
-plot(primal_history(:, 1), 'LineWidth', 1.5);
-plot(dual_history(:, 1), 'LineWidth', 1.5);
-hold off;
-axis tight;
-grid on;
-xlabel('#iter');
-legend({'primal energy', 'dual energy'}, ...
-    'FontSize', 12, 'Location', 'SouthOutside', ...
-    'Orientation', 'Horizontal');
-
-subplot(1, 3, 2);
-hold on;
-plot(primal_history(:, 1), 'LineWidth', 1.5);
-plot(primal_history(:, 2), '--', 'LineWidth', 1.5);
-plot(primal_history(:, 3), '--', 'LineWidth', 1.5);
-hold off;
-axis tight;
-grid on;
-xlabel('#iter');
-legend({'F(Kx) + G(x)', 'F(Kx)', 'G(x)'}, ...
-    'FontSize', 12, 'Location', 'SouthOutside', ...
-    'Orientation', 'Horizontal');
-
-subplot(1, 3, 3);
-hold on;
-plot(dual_history(:, 1), 'LineWidth', 1.5);
-plot(-dual_history(:, 2), '--', 'LineWidth', 1.5);
-plot(-dual_history(:, 3), '--', 'LineWidth', 1.5);
-hold off;
-axis tight;
-grid on;
-xlabel('#iter');
-legend({'-[F*(y) + G*(-K*y)]', '-F*(y)', '-G*(-K*y)'}, ...
-    'FontSize', 12, 'Location', 'SouthOutside', ...
-    'Orientation', 'Horizontal');
-
-% evaluate minimizer x_star = [u_star; L_star]
-x_star = x;
-p_star = p;
-u_star = x_star(1 : 2 * k * m * n);
-u_star = reshape(u_star, m * n, 2, k);
-T_u = zeros(m, n, k);
-for i = 1 : k
-    T_u(:, :, i) = ...
-        evaluate_displacement(img{i}, h_img, u_star(:, :, i), omega);
-end
-
-L_star = x_star(2 * k * m * n + 1 : end);
-L_star = reshape(L_star, m, n, k + 1);
-
-% get cell-centered grid over omega for plotting purposes
-[cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
-cc_grid = [cc_x(:), cc_y(:)];
-
-% display resulting displacements & low rank components
-figure('units', 'normalized', 'outerposition', [0 0 1 1]);
-colormap gray(256);
-
-for i = 1 : k
-    
-    subplot(3, k + 1, i);
-    set(gca, 'YDir', 'reverse');
-    imagesc(...
-        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-        'CData', T(:, :, i));
-    axis image;
-    title(sprintf('template T_%d', i));
-    
-    hold on;
-    quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-        u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
-    hold off;
-    
-end
-
-subplot(3, k + 1, k + 1);
-set(gca, 'YDir', 'reverse');
-imagesc(...
-    'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-    'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-    'CData', R);
-axis image;
-title('reference R');
-
-for i = 1 : k
-
-    subplot(3, k + 1, (k + 1) + i);
-    set(gca, 'YDir', 'reverse');
-    imagesc(...
-        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-        'CData', T_u(:, :, i));
-    axis image;
-    title(sprintf('T_%d(u_%d)', i, i));
-    
-end
-
-for i = 1 : (k + 1)
-    subplot(3, k + 1, 2 * (k + 1) + i);
-    set(gca, 'YDir', 'reverse');
-    imagesc(...
-        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-        'CData', L_star(:, :, i));
-    axis image;
-    title(sprintf('low rank component l_%d', i));
 end
 
 %% LOCAL FUNCTION DEFINITIONS
