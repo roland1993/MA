@@ -35,7 +35,7 @@ if ~conjugate_flag
     % nuclear norm = l1-norm of S = (sigma_1, .., sigma_p)'
     res1 = mu * norm(S, 1);
     
-    if nargout == 2
+    if nargout >= 2
         
         % Prox_[NN] by spectral soft thresholding on S
         S_threshold = max(S - mu * tau, 0);
@@ -65,7 +65,7 @@ else
     end
     
     % compute prox-step for NN* with Moreau's identity (if requested)
-    if nargout == 2
+    if nargout >= 2
         [~, prox] = nuclear_norm(L(:) / (mu * tau), numImg, ...
             1 / tau, 1 / mu, false);
         res2 = L(:) - mu * tau * prox;
