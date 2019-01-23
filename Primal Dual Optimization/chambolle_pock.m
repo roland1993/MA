@@ -67,14 +67,19 @@ x_bar = x0;
 primal_history = zeros(maxIter + 1, 1);
 G_history = zeros(maxIter + 1, 1);
 F_history = zeros(maxIter + 1, 1);
-[F_history(1), G_history(1), F_con, G_con] = primal_objective(x0);
+F_con = zeros(maxIter + 1, 1);
+G_con = zeros(maxIter + 1, 1);
+[F_history(1), G_history(1), F_con(1), G_con(1)] = primal_objective(x0);
 primal_history(1) = G_history(1) + F_history(1);
 
 % ... as well for dual, F* and G*
 dual_history = zeros(maxIter + 1, 1);
 GStar_history = zeros(maxIter + 1, 1);
 FStar_history = zeros(maxIter + 1, 1);
-[FStar_history(1), GStar_history(1), FS_con, GS_con] = dual_objective(y0);
+FS_con = zeros(maxIter + 1, 1);
+GS_con = zeros(maxIter + 1, 1);
+[FStar_history(1), GStar_history(1), FS_con(1), GS_con(1)] = ...
+    dual_objective(y0);
 dual_history(1) = -(GStar_history(1) + FStar_history(1));
 
 % output some info
@@ -91,15 +96,19 @@ fprintf('\n\tNUMBER OF PRIMAL VARIABLES\t %d', numel(x0));
 fprintf('\n\tNUMBER OF DUAL VARIABLES\t %d\n', numel(y0));
 fprintf('\n\tMAX NUMBER OF ITERATIONS\t %d', maxIter);
 fprintf('\n\tTOLERANCE FOR NORMALIZED GAP\t %.1e\n', tol);
-fprintf('\ni\tp(x_i)\t\tq(y_i)\t\tGAP(x_i,y_i)\tCONSTRAINTS HURT\n');
-fprintf([repmat('-', [1, 72]), '\n']);
+fprintf('\ni\tp(x_i)\t\tq(y_i)\t\tGAP(x_i,y_i)\tCONSTRAINTS VIOLATED\n');
+fprintf([repmat('-', [1, 76]), '\n']);
 fprintf('%d\t%+.2e\t%+.2e\t%.3e', ...
     0, primal_history(1), dual_history(1), ...
     abs((primal_history(1) - dual_history(1)) / dual_history(1)));
-if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
-if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
-if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
-if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
+% if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
+% if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
+% if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
+% if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
+fprintf('\tF: %.2e', F_con(1));
+fprintf('\tG: %.2e', G_con(1));
+fprintf('\tF*: %.2e', FS_con(1));
+fprintf('\tG*: %.2e', GS_con(1));
 fprintf('\n');
 
 % perform iteration
@@ -129,22 +138,13 @@ while true
     % get x_{n+1} = [(id + tau dG)^(-1)](x_n - tau * K' * y_{n+1})
     [~, x_current] = G(x_current - tau * (K' * y_current), false);
     
-%     % get output based on convergence of cesaro mean
-%     if i == 1
-%         x_star = x_current;
-%         y_star = y_current;
-%     else
-%         x_star = ((i - 1) / i) * x_star + (1 / i) * x_current;
-%         y_star = ((i - 1) / i) * y_star + (1 / i) * y_current;
-%     end
-    
     % record primal and dual objective value for current iterates
-    [F_history(i + 1), G_history(i + 1), F_con, G_con] = ...
-        primal_objective(x_current);    % primal_objective(x_star);
+    [F_history(i + 1), G_history(i + 1), F_con(i + 1), G_con(i + 1)] = ...
+        primal_objective(x_current);
     primal_history(i + 1) = G_history(i + 1) + F_history(i + 1);
     
-    [FStar_history(i + 1), GStar_history(i + 1), FS_con, GS_con] = ...
-        dual_objective(y_current);      % dual_objective(y_star);
+    [FStar_history(i + 1), GStar_history(i + 1), FS_con(i + 1), ...
+        GS_con(i + 1)] = dual_objective(y_current);
     dual_history(i + 1) = -(GStar_history(i + 1) + FStar_history(i + 1));
     
     % x_bar_{n+1} = x_{n+1} + theta * (x_{n+1} - x_n)
@@ -154,10 +154,14 @@ while true
     fprintf('%d\t%+.2e\t%+.2e\t%.3e', i, primal_history(i + 1), ...
         dual_history(i + 1), abs((primal_history(i + 1) - ...
         dual_history(i + 1)) / dual_history(i + 1)));
-    if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
-    if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
-    if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
-    if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
+    fprintf('\tF: %.2e', F_con(i + 1));
+    fprintf('\tG: %.2e', G_con(i + 1));
+    fprintf('\tF*: %.2e', FS_con(i + 1));
+    fprintf('\tG*: %.2e', GS_con(i + 1));
+%     if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
+%     if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
+%     if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
+%     if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
     fprintf('\n');
     
 end
@@ -174,12 +178,16 @@ else
     
     % delete redundant entries
     primal_history(i + 2 : end) = [];
-    G_history(i + 2 : end) = [];
     F_history(i + 2 : end) = [];
+    G_history(i + 2 : end) = [];
+    F_con(i + 2 : end) = [];
+    G_con(i + 2 : end) = [];
     
     dual_history(i + 2 : end) = [];
-    GStar_history(i + 2 : end) = [];
     FStar_history(i + 2 : end) = [];
+    GStar_history(i + 2 : end) = [];
+    FS_con(i + 2 : end) = [];
+    GS_con(i + 2 : end) = [];
     
 end
 
@@ -188,9 +196,10 @@ x_star = x_current;
 y_star = y_current;
 
 % incorporate F_history, G_history into primal_history (conjugates as well)
-primal_history = [primal_history, F_history, G_history];
-dual_history = [dual_history, FStar_history, GStar_history];
-
+primal_history = ...
+    [primal_history, F_history, G_history, F_con, G_con];
+dual_history = ...
+    [dual_history, FStar_history, GStar_history, FS_con, GS_con];
 
 %-------------------------------------------------------------------------%
 % nested functions for primal and dual objective
