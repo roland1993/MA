@@ -75,7 +75,7 @@ R = evaluate_displacement(img{k + 1}, h_img, zeros(m * n, 2), omega);
 
 % optimization parameters
 theta = 1;
-maxIter = 1000;
+maxIter = 10000;
 tol = 0;
 outerIter = 15;
 
@@ -317,8 +317,12 @@ l = x(2 * k * mn + 1 : end);
 [res1, res2, res3] = ...
     nuclear_norm_constraint(l, numImg, tau, nu, conjugate_flag);
 
-% extend res2 = prox(l) to a proper prox of same length as x
-res2 = [u; res2];
+if ~conjugate_flag
+    res2 = [u; res2];
+else
+    res2 = [zeros(size(u)); res2];
+    res3 = max(res3, max(abs(u(:))));
+end
 
 end
 
