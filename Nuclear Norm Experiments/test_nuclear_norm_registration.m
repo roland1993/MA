@@ -32,27 +32,30 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 %     img{i} = conv2(A(:, :, idx(i)), ones(4) / 16, 'same');
 %     img{i} = img{i}(1 : 4 : end, 1 : 4 : end);
 % end
-
-% % ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
-% m = 32;
-% n = 32;
-% numFrames = 7;
-% ex = 1;
-% A = createTestImage(m, n, numFrames, ex);
-% 
-% k = 3;
-% idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
-% img = cell(k + 1, 1);
-% for i = 1 : k + 1
-%     img{i} = A(:, :, idx(i));
-% end
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-k = 1;
-img{1} = double(rgb2gray(imread('sr1.png')));
-img{1} = normalize(img{1});
-img{2} = double(rgb2gray(imread('sr2.png')));
-img{2} = normalize(img{2});
+% ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
+m = 32;
+n = 32;
+numFrames = 7;
+ex = 3;
+A = createTestImage(m, n, numFrames, ex);
+
+k = 3;
+idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
+img = cell(k + 1, 1);
+for i = 1 : k + 1
+    img{i} = A(:, :, idx(i));
+end
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+% % ~~~~~~~ SLIDING RECT DATA ~~~~~~~
+% k = 1;
+% img{1} = double(rgb2gray(imread('sr1.png')));
+% img{1} = normalize(img{1});
+% img{2} = double(rgb2gray(imread('sr2.png')));
+% img{2} = normalize(img{2});
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % get image resolution etc.
 [m, n] = size(img{1});
@@ -74,14 +77,14 @@ R = evaluate_displacement(img{k + 1}, h_img, zeros(m * n, 2), omega);
 theta = 1;
 maxIter = 1000;
 tol = 0;
-outerIter = 5;
+outerIter = 15;
 
 % initialize primary and dual variables
 x = zeros((3 * k + 1) * m * n, 1);
 p = zeros((5 * k + 1) * m * n, 1);
 
 % regularization strength
-mu = 1e-1;
+mu = 1e0;
 
 % lower left block of A ~> gradient operator on displacements u
 Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
@@ -99,7 +102,7 @@ A4 = sparse(4 * k * m * n, (k + 1) * m * n);
 
 % prepare figures for output display
 figure(1);
-set(gcf, 'units', 'normalized', 'outerposition', [0 0.5 1 0.5]);
+set(gcf, 'units', 'normalized', 'outerposition', [0 0 1 1]);
 figure(2);
 set(gcf, 'units', 'normalized', 'outerposition', [0 0 1 1]);
 
@@ -129,7 +132,7 @@ for o = 1 : outerIter
     
     % estimate threshold nu from nuclear norm of column-wise images
     [~, S, ~] = svd([reshape(T_current, m * n, k), vec(R)], 'econ');
-    nu = 0.95 * sum(diag(S));
+    nu = 0.85 * sum(diag(S));
     
     % upper left block of A ~> template image gradients
     A1 = [      -blkdiag(dT{:})
@@ -162,7 +165,7 @@ for o = 1 : outerIter
     figure(1);
     clf;
     
-    subplot(1, 3, 1);
+    subplot(2, 2, 1);
     hold on;
     plot(primal_history(:, 1), 'LineWidth', 1.5);
     plot(dual_history(:, 1), 'LineWidth', 1.5);
@@ -174,7 +177,17 @@ for o = 1 : outerIter
         'FontSize', 12, 'Location', 'SouthOutside', ...
         'Orientation', 'Horizontal');
     
-    subplot(1, 3, 2);
+    GAP = abs((primal_history(:, 1) - dual_history(:, 1)) ./ ...
+        dual_history(:, 1));
+    subplot(2, 2, 2);
+    semilogy(GAP, 'LineWidth', 1.5);
+    axis tight;
+    grid on;
+    xlabel('#iter');
+    legend({'Absolute normalized gap'}, 'FontSize', 12, ...
+        'Location', 'SouthOutside', 'Orientation', 'Horizontal');
+    
+    subplot(2, 2, 3);
     hold on;
     plot(primal_history(:, 1), 'LineWidth', 1.5);
     plot(primal_history(:, 2), '--', 'LineWidth', 1.5);
@@ -187,7 +200,7 @@ for o = 1 : outerIter
         'FontSize', 12, 'Location', 'SouthOutside', ...
         'Orientation', 'Horizontal');
     
-    subplot(1, 3, 3);
+    subplot(2, 2, 4);
     hold on;
     plot(dual_history(:, 1), 'LineWidth', 1.5);
     plot(-dual_history(:, 2), '--', 'LineWidth', 1.5);
@@ -274,7 +287,7 @@ for o = 1 : outerIter
         title(sprintf('low rank component l_%d', i));
     end
     
-    % press key to continue
+    % pause until button press
     if o < outerIter
         str = [sprintf('%s ITERATION #%d FINISHED %s\n\n', ...
             repmat('~', [1, 10]), o, repmat('~', [1, 10])), ...
