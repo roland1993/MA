@@ -75,7 +75,7 @@ R = evaluate_displacement(img{k + 1}, h_img, zeros(m * n, 2), omega);
 
 % optimization parameters
 theta = 1;
-maxIter = 10000;
+maxIter = 1000;
 tol = 0;
 outerIter = 15;
 
@@ -165,7 +165,7 @@ for o = 1 : outerIter
     figure(1);
     clf;
     
-    subplot(2, 2, 1);
+    subplot(2, 3, 1);
     hold on;
     plot(primal_history(:, 1), 'LineWidth', 1.5);
     plot(dual_history(:, 1), 'LineWidth', 1.5);
@@ -176,18 +176,34 @@ for o = 1 : outerIter
     legend({'primal energy', 'dual energy'}, ...
         'FontSize', 12, 'Location', 'SouthOutside', ...
         'Orientation', 'Horizontal');
+    title('primal vs. dual')
     
     GAP = abs((primal_history(:, 1) - dual_history(:, 1)) ./ ...
         dual_history(:, 1));
-    subplot(2, 2, 2);
+    subplot(2, 3, 2);
     semilogy(GAP, 'LineWidth', 1.5);
     axis tight;
     grid on;
     xlabel('#iter');
     legend({'Absolute normalized gap'}, 'FontSize', 12, ...
         'Location', 'SouthOutside', 'Orientation', 'Horizontal');
+    title('primal-dual gap');
     
-    subplot(2, 2, 3);
+    subplot(2, 3, 3);
+    semilogy(primal_history(:, 4));
+    hold on;
+    semilogy(primal_history(:, 5));
+    semilogy(dual_history(:, 4));
+    semilogy(dual_history(:, 5));
+    hold off;
+    axis tight;
+    grid on;
+    xlabel('#iter');
+    legend({'F', 'G', 'F*', 'G*'}, 'FontSize', 12, ...
+        'Location', 'SouthOutside', 'Orientation', 'Horizontal');
+    title('constraints');
+    
+    subplot(2, 3, 4);
     hold on;
     plot(primal_history(:, 1), 'LineWidth', 1.5);
     plot(primal_history(:, 2), '--', 'LineWidth', 1.5);
@@ -199,8 +215,9 @@ for o = 1 : outerIter
     legend({'F(Kx) + G(x)', 'F(Kx)', 'G(x)'}, ...
         'FontSize', 12, 'Location', 'SouthOutside', ...
         'Orientation', 'Horizontal');
+    title('primal objective');
     
-    subplot(2, 2, 4);
+    subplot(2, 3, 5);
     hold on;
     plot(dual_history(:, 1), 'LineWidth', 1.5);
     plot(-dual_history(:, 2), '--', 'LineWidth', 1.5);
@@ -212,6 +229,7 @@ for o = 1 : outerIter
     legend({'-[F*(y) + G*(-K*y)]', '-F*(y)', '-G*(-K*y)'}, ...
         'FontSize', 12, 'Location', 'SouthOutside', ...
         'Orientation', 'Horizontal');
+    title('dual objective');
     
     % evaluate minimizer x_star = [u_star; L_star]
     x_star = x;
