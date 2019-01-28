@@ -12,10 +12,12 @@ function [x_star, y_star, primal_history, dual_history] = ...
 % IN:
 %   F       ~ function handle       to return (based on switch flag)
 %                                       - function value F(u)
+%                                       - measure for violated constraints
 %                                       - prox-operator of F
 %                                           [(id + sigma dF)^(-1)](u)
 %                                               OR
 %                                       - convex conjugate value F*(u)
+%                                       - measure for violated constraints
 %                                       - prox-operator of F*
 %                                           [(id + sigma dF*)^(-1)](u)
 %   G       ~ function handle       (see F, with tau <-> sigma)
@@ -31,10 +33,12 @@ function [x_star, y_star, primal_history, dual_history] = ...
 % OUT:
 %   x_star          ~ n x 1         minimizer of primal problem
 %   y_star          ~ m x 1         maximizer of dual problem
-%   primal_history  ~ #iter x 3     history over all iterates of
-%                                       p(x_i), F(K*x_i) and G(x_i)
-%   dual_history    ~ #iter x 3     history over all iterates of
-%                                       q(y_i), F(y_i) and G(-K'*y_i)
+%   primal_history  ~ #iter x 5     history over all iterates of
+%                                       p(x_i), F(K*x_i), G(x_i), 
+%                                       F-constraints and G-constraints
+%   dual_history    ~ #iter x 5     history over all iterates of
+%                                       q(y_i), F*(y_i), G*(-K'*y_i),
+%                                       F*-constraints and G*-constraints
 
 % set standard parameters
 if nargin < 10, tol = 1e-3; end
@@ -101,10 +105,6 @@ fprintf([repmat('-', [1, 76]), '\n']);
 fprintf('%d\t%+.2e\t%+.2e\t%.3e', ...
     0, primal_history(1), dual_history(1), ...
     abs((primal_history(1) - dual_history(1)) / dual_history(1)));
-% if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
-% if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
-% if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
-% if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
 fprintf('\tF: %.2e', F_con(1));
 fprintf('\tG: %.2e', G_con(1));
 fprintf('\tF*: %.2e', FS_con(1));
@@ -133,10 +133,10 @@ while true
     x_old = x_current;
     
     % get y_{n+1} = [(id + sigma dF*)^(-1)](y_n + sigma * K * x_bar_n)
-    [~, y_current] = F(y_current + sigma * (K * x_bar), true);
+    [~, ~, y_current] = F(y_current + sigma * (K * x_bar), true);
     
     % get x_{n+1} = [(id + tau dG)^(-1)](x_n - tau * K' * y_{n+1})
-    [~, x_current] = G(x_current - tau * (K' * y_current), false);
+    [~, ~, x_current] = G(x_current - tau * (K' * y_current), false);
     
     % record primal and dual objective value for current iterates
     [F_history(i + 1), G_history(i + 1), F_con(i + 1), G_con(i + 1)] = ...
@@ -158,10 +158,6 @@ while true
     fprintf('\tG: %.2e', G_con(i + 1));
     fprintf('\tF*: %.2e', FS_con(i + 1));
     fprintf('\tG*: %.2e', GS_con(i + 1));
-%     if F_con > 1e-15, fprintf('\tF: %.2e', F_con); end
-%     if G_con > 1e-15, fprintf('\tG: %.2e', G_con); end
-%     if FS_con > 1e-15, fprintf('\tF*: %.2e', FS_con); end
-%     if GS_con > 1e-15, fprintf('\tG*: %.2e', GS_con); end
     fprintf('\n');
     
 end
@@ -195,7 +191,7 @@ end
 x_star = x_current;
 y_star = y_current;
 
-% incorporate F_history, G_history into primal_history (conjugates as well)
+% incorporate F_history, G_history into primal_history (same for the dual)
 primal_history = ...
     [primal_history, F_history, G_history, F_con, G_con];
 dual_history = ...
@@ -206,14 +202,14 @@ dual_history = ...
 
     function [F_val, G_val, F_constraint, G_constraint] = ...
             primal_objective(x)
-        [F_val, ~, F_constraint] = F(K*x, false);
-        [G_val, ~, G_constraint] = G(x, false);
+        [F_val, F_constraint] = F(K*x, false);
+        [G_val, G_constraint] = G(x, false);
     end
 
     function [FS_val, GS_val, FStar_constraint, GStar_constraint] = ...
             dual_objective(y)
-        [FS_val, ~, FStar_constraint] = F(y, true);
-        [GS_val, ~, GStar_constraint] = G(-K'*y, true);
+        [FS_val, FStar_constraint] = F(y, true);
+        [GS_val, GStar_constraint] = G(-K'*y, true);
     end
 
 %-------------------------------------------------------------------------%

@@ -11,18 +11,18 @@ function [res1, res2, res3] = ...
 % OUT:
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1         function value SAD(u)
-%       res2            ~ m*n*2 x 1     prox step of SAD at u
-%       res3            ~ 1 x 1         measure for hurt constraints
+%       res2            ~ 1 x 1         constraint violation measure
+%       res3            ~ m*n*2 x 1     prox step of SAD at u
 %   IF conjugate_flag:
 %       res1            ~ 1 x 1         convex conjugate value SAD*(u)
-%       res2            ~ m*n*2 x 1     prox step of SAD* at u
-%       res3            ~ 1 x 1         measure for hurt constraints
+%       res2            ~ 1 x 1         constraint violation measure
+%       res3            ~ m*n*2 x 1     prox step of SAD* at u
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 8, conjugate_flag = false; end
 
 % initialize measure for hurt constraints with 0
-res3 = 0;
+res2 = 0;
 
 % linearize interpolation of T at u0
 [T, grad_T] = evaluate_displacement(T, h, reshape(u0, [], 2));
@@ -35,7 +35,7 @@ if ~conjugate_flag
     phi = b + grad_T * u;
     res1 = lambda * sum(abs(phi));
     
-    if nargout == 2
+    if nargout == 3
         
         % reshape sparse grad_T ~ m*n x m*n*2 to ~ m*n x 2
         k = size(grad_T, 1);            % get k = m * n
@@ -53,21 +53,19 @@ if ~conjugate_flag
         idx3_2 = idx3 & (norm_grad_squared <= 1e-14);
         
         u = reshape(u, k, 2);
-        res2 = zeros(size(u));
+        res3 = zeros(size(u));
         
         % case 1
-        res2(idx1, :) = u(idx1, :) + tau * lambda * grad_T(idx1, :);
+        res3(idx1, :) = u(idx1, :) + tau * lambda * grad_T(idx1, :);
         % case 2
-        res2(idx2, :) = u(idx2, :) - tau * lambda * grad_T(idx2, :);
+        res3(idx2, :) = u(idx2, :) - tau * lambda * grad_T(idx2, :);
         % case 3
-        res2(idx3_1, :) = u(idx3_1, :) - grad_T(idx3_1, :) .* ...
+        res3(idx3_1, :) = u(idx3_1, :) - grad_T(idx3_1, :) .* ...
             (phi(idx3_1) ./ norm_grad_squared(idx3_1));
-        res2(idx3_2, :) = u(idx3_2, :);
+        res3(idx3_2, :) = u(idx3_2, :);
         
-        res2 = res2(:);
+        res3 = res3(:);
         
-    else
-        res2 = [];
     end
     
 else
@@ -81,7 +79,7 @@ else
     res1 = zeros(numel(T), 1);
     
     % evaluate constraint measure pointwise as well
-    res3 = zeros(numel(T), 1);
+    res2 = zeros(numel(T), 1);
     
     % reshape u and gradient to format ~ m*n x 2
     u = reshape(u, [], 2);
@@ -95,7 +93,7 @@ else
     res1(idx1) = (-1) * abs(b(idx1));
     
     % dist(u_ij, FR) = ||u_ij||_2
-    res3(idx1) = sqrt(sum(u(idx1, :) .^ 2, 2));
+    res2(idx1) = sqrt(sum(u(idx1, :) .^ 2, 2));
     
     % case 2: gradient ~= 0, FR = {t * grad_ij | -1 <= t <= 1}
     idx2 = ~idx1;
@@ -114,32 +112,31 @@ else
     
     % case 2.1: u_rot_ij(1) > ||g_ij||_2
     idx2_1 = idx2 & (u_rot(:, 1) > norm_grad);
-    res3(idx2_1) = sum((u(idx2_1, :) - grad_T(idx2_1, :)) .^ 2, 2);
+    res2(idx2_1) = sum((u(idx2_1, :) - grad_T(idx2_1, :)) .^ 2, 2);
     
     % case 2.2: u_rot_ij(1) < - ||g_ij||_2
     idx2_2 = idx2 & (u_rot(:, 1) < - norm_grad);
-    res3(idx2_2) = sum((u(idx2_2, :) + grad_T(idx2_2, :)) .^ 2, 2);
+    res2(idx2_2) = sum((u(idx2_2, :) + grad_T(idx2_2, :)) .^ 2, 2);
     
     % case 2.3: |u_rot_ij(1)| <= ||g_ij||_2
     idx2_3 = idx2 & ~(idx2_1 | idx2_2);
-    res3(idx2_3) = abs(u_rot(idx2_3, 2));
+    res2(idx2_3) = abs(u_rot(idx2_3, 2));
     
     % combine pointwise results to form output
     res1 = lambda * sum(res1);
-    res3 = max(res3);
+    res2 = max(res2);
     
     % Prox_[SAD*]
-    if nargout == 2
+    if nargout == 3
         
         % compute prox-step for G* = SAD* with Moreau's identity
         %   [(id + tau * dG*)^(-1)](u) =
         %       u - tau * [(id + (1 / tau) * dG)^(-1)](u / tau)
-        [~, prox] = SAD_registration(u / (lambda * tau), u0, T, R, h, ...
+        [~, ~, prox] = ...
+            SAD_registration(u / (lambda * tau), u0, T, R, h, ...
             lambda, 1 / (lambda * tau), false);
-        res2 = u - (lambda * tau) * prox;
-        
-    else
-        res2 = [];
+        res3 = u - (lambda * tau) * prox;
+
     end
     
 end

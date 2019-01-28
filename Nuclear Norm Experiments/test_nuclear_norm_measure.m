@@ -220,7 +220,7 @@ for i = 1 : numFrames
     F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
     [~, ~, primal_history, ~] = ...
         chambolle_pock(F, G, K, L0, P0, theta, tau, sigma, maxIter, tol);
-    data_term(i, :) = primal_history(end, :);
+    data_term(i, :) = primal_history(end, 1 : 3);
     
     % compute SSD
     SSD(i) = sum((I(:, 1) - I(:, 2)) .^ 2);

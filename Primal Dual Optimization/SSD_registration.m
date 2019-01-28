@@ -12,18 +12,18 @@ function [res1, res2, res3] = ...
 % OUT:
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1         function value SSD(u)
-%       res2            ~ m*n*2 x 1     prox step of SSD at u
-%       res3            ~ 1 x 1         measure for hurt constraints
+%       res2            ~ 1 x 1         constraint violation measure
+%       res3            ~ m*n*2 x 1     prox step of SSD at u
 %   IF conjugate_flag:
 %       res1            ~ 1 x 1         convex conjugate value SSD*(u)
-%       res2            ~ m*n*2 x 1     prox step of SSD* at u
-%       res3            ~ 1 x 1        	measure for hurt constraints
+%       res2            ~ 1 x 1         constraint violation measure
+%       res3            ~ m*n*2 x 1     prox step of SSD* at u
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 8, conjugate_flag = false; end
 
 % initialize constraint measure with 0
-res3 = 0;
+res2 = 0;
 
 % get k = m * n
 k = numel(T);
@@ -40,7 +40,7 @@ if ~conjugate_flag
     res1 = 0.5 * lambda * (residual' * residual);
     
     % Prox_[SSD]
-    if nargout == 2
+    if nargout == 3
         
         D1 = grad_T(:, 1 : k);
         D2 = grad_T(:, (k + 1) : end);
@@ -49,10 +49,8 @@ if ~conjugate_flag
             (lambda * tau) * D1 .* D2, ...
             speye(k) + (lambda * tau) * D2 .^ 2];
         c = u - (lambda * tau) * grad_T' * b;
-        res2 = A \ c;
+        res3 = A \ c;
         
-    else
-        res2 = [];
     end
     
 else
@@ -80,33 +78,32 @@ else
     
     % constraint: (v - b) has to be in Image(pinv(A))
     %   -> error measure given by distance from this subspace
-    res3 = zeros(size(idx));
+    res2 = zeros(size(idx));
     
     % case 1: grad_T_ij = 0
     %   -> error measure is distance from 0
-    res3(~idx) = sqrt(sum(u(~idx, :) .^ 2, 2));
+    res2(~idx) = sqrt(sum(u(~idx, :) .^ 2, 2));
     
     % case 2: grad_T_ij ~= 0
     %   -> error measure is distance to subspace {mu * grad_T_ij}
     grad_T(idx, :) = grad_T(idx, :) ./ sqrt(norm_grad_squared(idx));
     grad_T_orth = [-grad_T(:, 2), grad_T(:, 1)];
-    res3(idx) = abs(sum(grad_T_orth(idx, :) .* u(idx, :), 2));
+    res2(idx) = abs(sum(grad_T_orth(idx, :) .* u(idx, :), 2));
     
     % return maximum error over all ij
-    res3 = max(res3);
+    res2 = max(res2);
     
     % Prox_[SSD*]
-    if nargout == 2
+    if nargout == 3
         
         % compute prox-step for G* = SSD* with Moreau's identity
         %   [(id + tau * dG*)^(-1)](u) =
         %       u - tau * [(id + (1 / tau) * dG)^(-1)](u / tau)
-        [~, prox] = SSD_registration(u / (lambda * tau), u0, T, R, h, ...
+        [~, ~, prox] = ...
+            SSD_registration(u / (lambda * tau), u0, T, R, h, ...
             lambda, 1 / (lambda * tau), false);
-        res2 = u - (lambda * tau) * prox;
+        res3 = u - (lambda * tau) * prox;
         
-    else
-        res2 = [];
     end
     
 end

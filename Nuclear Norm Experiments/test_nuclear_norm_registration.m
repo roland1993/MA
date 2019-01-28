@@ -331,15 +331,30 @@ mn = numel(x) / (3 * k + 1);
 u = x(1 : 2 * k * mn);
 l = x(2 * k * mn + 1 : end);
 
-% apply nuclear norm constraint only on l-part
-[res1, res2, res3] = ...
-    nuclear_norm_constraint(l, numImg, tau, nu, conjugate_flag);
-
-if ~conjugate_flag
-    res2 = [u; res2];
+% apply nuclear norm constraint on l-part (compute only if requested!)
+if nargout == 3
+    
+    [res1, res2, res3] = ...
+        nuclear_norm_constraint(l, numImg, tau, nu, conjugate_flag);
+    
+    if ~conjugate_flag
+        % prox for 0 * u is identity
+        res3 = [u; res3];
+    else
+        % prox for delta_{0}(u) = 0
+        res2 = max(res2, max(abs(u(:))));
+        res3 = [zeros(size(u)); res3];
+    end
+    
 else
-    res2 = [zeros(size(u)); res2];
-    res3 = max(res3, max(abs(u(:))));
+    
+    [res1, res2] = ...
+        nuclear_norm_constraint(l, numImg, tau, nu, conjugate_flag);
+    
+    if conjugate_flag
+        res2 = max(res2, max(abs(u(:))));
+    end
+    
 end
 
 end
@@ -356,27 +371,51 @@ mn = numel(y) / (5 * k + 1);
 r = y(1 : (k + 1) * mn);
 v = y((k + 1) * mn + 1 : end);
 
-% apply SAD to r-part
-[res1_F1, res2_F1, res3_F1] = SAD(r, b, sigma, conjugate_flag);
-
-% initialize outputs with values from F1
-res1 = res1_F1;
-res2 = zeros((5 * k + 1) * mn, 1);
-res2(1 : (k + 1) * mn) = res2_F1;
-res3 = res3_F1;
-
-% apply mu*||.||_{2,1} to each of the k components v_i of v
-v = reshape(v, 4 * mn, k);
-for i = 1 : k
+% apply SAD to r-part (compute prox only if requested!)
+if nargout == 3
     
-    [res1_F2, res2_F2, res3_F2] = ...
-        norm21(v(:, i), mu, sigma, conjugate_flag);
+    [res1_F1, res2_F1, res3_F1] = SAD(r, b, sigma, conjugate_flag);
     
-    % update outputs
-    res1 = res1 + res1_F2;
-    res2((k + 1) * mn + (i - 1) * 4 * mn + 1 : ...
-                                (k + 1) * mn + i * 4 * mn) = res2_F2;
-    res3 = max(res3, res3_F2);
+    % initialize outputs with values from F1
+    res1 = res1_F1;
+    res2 = res2_F1;
+    res3 = zeros((5 * k + 1) * mn, 1);
+    res3(1 : (k + 1) * mn) = res3_F1;
+    
+    % apply mu*||.||_{2,1} to each of the k components v_i of v
+    v = reshape(v, 4 * mn, k);
+    for i = 1 : k
+        
+        [res1_F2, res2_F2, res3_F2] = ...
+            norm21(v(:, i), mu, sigma, conjugate_flag);
+        
+        % update outputs
+        res1 = res1 + res1_F2;
+        res2 = max(res2, res2_F2);
+        res3((k + 1) * mn + (i - 1) * 4 * mn + 1 : ...
+            (k + 1) * mn + i * 4 * mn) = res3_F2;
+        
+    end
+    
+else
+    
+    [res1_F1, res2_F1] = SAD(r, b, sigma, conjugate_flag);
+    
+    % initialize outputs with values from F1
+    res1 = res1_F1;
+    res2 = res2_F1;
+    
+    % apply mu*||.||_{2,1} to each of the k components v_i of v
+    v = reshape(v, 4 * mn, k);
+    for i = 1 : k
+        
+        [res1_F2, res2_F2] = norm21(v(:, i), mu, sigma, conjugate_flag);
+        
+        % update outputs
+        res1 = res1 + res1_F2;
+        res2 = max(res2, res2_F2);
+        
+    end
     
 end
 
