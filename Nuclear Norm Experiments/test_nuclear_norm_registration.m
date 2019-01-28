@@ -50,13 +50,29 @@ end
 
 % optimization parameters
 theta = 1;
-maxIter = 500;
+maxIter = 1000;
 tol = 0;
-outerIter = 20;
+outerIter = 15;
 mu = 1e0;
 nu_factor = 0.85;
+bc = 'linear';
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+% % ~~~~~~~ ROTATING STAR DATA ~~~~~~~
+% k = 1;
+% img{1} = normalize(double(imread('rotation_star1.png')));
+% img{2} = normalize(double(imread('rotation_star2.png')));
+% 
+% % optimization parameters
+% theta = 1;
+% maxIter = 1000;
+% tol = 0;
+% outerIter = 20;
+% mu = 1e-1;
+% nu_factor = 0.98;
+% bc = 'linear';
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% 
 % % ~~~~~~~ SLIDING RECT DATA ~~~~~~~
 % k = 1;
 % img{1} = double(rgb2gray(imread('sr1.png')));
@@ -71,6 +87,7 @@ nu_factor = 0.85;
 % outerIter = 5;
 % mu = 1e-1;
 % nu_factor = 0.95;
+% bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % get image resolution etc.
@@ -95,9 +112,21 @@ p = zeros((5 * k + 1) * m * n, 1);
 
 % lower left block of A ~> gradient operator on displacements u
 Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
-Dx(m, m) = 0;
+if strcmp(bc, 'linear')
+    Dx(m, [m - 1, m]) = [-1, 1];
+elseif strcmp(bc, 'neumann')
+    Dx(m, m) = 0;
+else
+    error('Unknown boundary condition!');
+end
 Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
-Dy(n, n) = 0;
+if strcmp(bc, 'linear')
+    Dy(n, [n - 1, n]) = [-1, 1];
+elseif strcmp(bc, 'neumann')
+    Dy(n, n) = 0;
+else
+    error('Unknown boundary condition!');
+end
 D = kron(speye(2), [kron(speye(n), Dx); kron(Dy, speye(m))]);
 A2 = kron(speye(k), D);
 
