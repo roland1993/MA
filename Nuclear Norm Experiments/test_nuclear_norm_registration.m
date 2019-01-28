@@ -47,6 +47,14 @@ img = cell(k + 1, 1);
 for i = 1 : k + 1
     img{i} = A(:, :, idx(i));
 end
+
+% optimization parameters
+theta = 1;
+maxIter = 500;
+tol = 0;
+outerIter = 20;
+mu = 1e0;
+nu_factor = 0.85;
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % % ~~~~~~~ SLIDING RECT DATA ~~~~~~~
@@ -55,7 +63,15 @@ end
 % img{1} = normalize(img{1});
 % img{2} = double(rgb2gray(imread('sr2.png')));
 % img{2} = normalize(img{2});
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% 
+% % optimization parameters
+% theta = 1;
+% maxIter = 1000;
+% tol = 0;
+% outerIter = 5;
+% mu = 1e-1;
+% nu_factor = 0.95;
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % get image resolution etc.
 [m, n] = size(img{1});
@@ -73,18 +89,9 @@ R = evaluate_displacement(img{k + 1}, h_img, zeros(m * n, 2), omega);
 
 %% OPTIMIZATION SCHEME
 
-% optimization parameters
-theta = 1;
-maxIter = 1000;
-tol = 0;
-outerIter = 15;
-
 % initialize primary and dual variables
 x = zeros((3 * k + 1) * m * n, 1);
 p = zeros((5 * k + 1) * m * n, 1);
-
-% regularization strength
-mu = 1e0;
 
 % lower left block of A ~> gradient operator on displacements u
 Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
@@ -132,7 +139,7 @@ for o = 1 : outerIter
     
     % estimate threshold nu from nuclear norm of column-wise images
     [~, S, ~] = svd([reshape(T_current, m * n, k), vec(R)], 'econ');
-    nu = 0.85 * sum(diag(S));
+    nu = nu_factor * sum(diag(S));
     
     % upper left block of A ~> template image gradients
     A1 = [      -blkdiag(dT{:})
