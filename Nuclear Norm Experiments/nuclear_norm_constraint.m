@@ -9,12 +9,12 @@ function [res1, res2, res3] = ...
 % OUT:
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1             indicator of ||.||_* <= nu
-%       res2            ~ m*n x 1           prox-step of indicator
-%       res3            ~ 1 x 1             measure for hurt constraints
+%       res2            ~ 1 x 1             constraint violation measure
+%       res3            ~ m*n x 1           prox-step of indicator
 %   IF conjugate_flag:
-%       res1            ~ 1 x 1             convex conjugate of indicator
-%       res2            ~ m*n x 1           prox-step of conjugate
-%       res3            ~ 1 x 1             measure for hurt constraints
+%       res1            ~ 1 x 1             weighted spectral norm
+%       res2            ~ 1 x 1             constraint violation measure
+%       res3            ~ m*n x 1           prox-step of spectral norm
 
 % by default: evaluate constraint instead of its conjugate
 if nargin < 5, conjugate_flag = false; end
@@ -23,12 +23,12 @@ if nargin < 5, conjugate_flag = false; end
 L = reshape(L, [], numImg);
 
 % intialize error measure with zero
-res3 = 0;
+res2 = 0;
 
 if ~conjugate_flag
     
     % compute svd of L
-    [~, S, ~] = svd(L, 'econ');
+    [U, S, V] = svd(L, 'econ');
     S = diag(S);
     
     % return 0 as fctn. value of indicator
@@ -36,16 +36,13 @@ if ~conjugate_flag
     
     % distance to feasible region
     if sum(S) > nu
-        res3 = sum(S) - nu;
+        res2 = sum(S) - nu;
     end
     
-    % get prox operator via Moreau's identity (if requested)
-    if nargout >= 2
-        [~, conj_prox] = ...
-            nuclear_norm_constraint(L(:) / tau, numImg, 1 / tau, nu, true);
-        res2 = L(:) - tau * conj_prox;
-    else
-        res2 = [];
+    % get prox operator (l1-ball-projection of SV-vector)
+    if nargout == 3
+        res3 = U * diag(nu * l1ball_projection(S / nu)) * V';
+        res3 = res3(:);
     end
     
 else
@@ -58,7 +55,7 @@ else
     res1 = nu * max(S);
     
     % compute prox of spectral norm via prox of inf-norm of sv-vector S
-    if nargout >= 2
+    if nargout == 3
         
         % nu and tau in one factor
         mu = nu * tau;
@@ -68,11 +65,9 @@ else
         S_prox = S - mu * l1ball_projection(S / mu);
         
         % use prox step of sv-vector to compute prox of spectral norm
-        res2 = U * diag(S_prox) * V';
-        res2 = res2(:);
+        res3 = U * diag(S_prox) * V';
+        res3 = res3(:);
         
-    else
-        res2 = [];
     end
     
 end
