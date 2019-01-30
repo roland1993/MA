@@ -34,29 +34,29 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % end
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-% ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
-m = 32;
-n = 32;
-numFrames = 7;
-ex = 3;
-A = createTestImage(m, n, numFrames, ex);
-
-k = 3;
-idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
-img = cell(k + 1, 1);
-for i = 1 : k + 1
-    img{i} = A(:, :, idx(i));
-end
-
-% optimization parameters
-theta = 1;
-maxIter = 1000;
-tol = 0;
-outerIter = 15;
-mu = 1e0;
-nu_factor = 0.85;
-bc = 'linear';
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% % ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
+% m = 32;
+% n = 32;
+% numFrames = 7;
+% ex = 3;
+% A = createTestImage(m, n, numFrames, ex);
+% 
+% k = 3;
+% idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
+% img = cell(k + 1, 1);
+% for i = 1 : k + 1
+%     img{i} = A(:, :, idx(i));
+% end
+% 
+% % optimization parameters
+% theta = 1;
+% maxIter = 1000;
+% tol = 0;
+% outerIter = 15;
+% mu = 1e0;
+% nu_factor = 0.85;
+% bc = 'linear';
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % % ~~~~~~~ ROTATING STAR DATA ~~~~~~~
 % k = 1;
@@ -72,7 +72,7 @@ bc = 'linear';
 % nu_factor = 0.98;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% 
+
 % % ~~~~~~~ SLIDING RECT DATA ~~~~~~~
 % k = 1;
 % img{1} = double(rgb2gray(imread('sr1.png')));
@@ -302,8 +302,9 @@ for o = 1 : outerIter
         title(sprintf('template T_%d', i));
         
         hold on;
-        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-            u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
+%         quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+%             u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
+        plot_grid(reshape(cc_grid + u_star(:, :, i), [m, n, 2]), 2);
         hold off;
         
     end
