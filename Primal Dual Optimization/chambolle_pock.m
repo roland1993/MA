@@ -98,10 +98,10 @@ fprintf('\n\tPRIMAL STEP SIZE\t\tTAU\t= %.3f', tau);
 fprintf('\n\tDUAL STEP SIZE\t\t\tSIGMA\t= %.3f\n', sigma);
 fprintf('\n\tNUMBER OF PRIMAL VARIABLES\t %d', numel(x0));
 fprintf('\n\tNUMBER OF DUAL VARIABLES\t %d\n', numel(y0));
-fprintf('\n\tMAX NUMBER OF ITERATIONS\t %d', maxIter);
-fprintf('\n\tTOLERANCE FOR NORMALIZED GAP\t %.1e\n', tol);
-fprintf('\ni\tp(x_i)\t\tq(y_i)\t\tGAP(x_i,y_i)\tCONSTRAINTS VIOLATED\n');
-fprintf([repmat('-', [1, 76]), '\n']);
+fprintf('\n\tMAX NUMBER OF ITERATIONS\t\t %d', maxIter);
+fprintf('\n\tTOLERANCE FOR GAP & INFEASIBILITIES\t %.1e\n', tol);
+fprintf('\ni\tp(x_i)\t\tq(y_i)\t\tGAP(x_i,y_i)\tINFEASIBILITIES\n');
+fprintf([repmat('-', [1, 116]), '\n']);
 fprintf('%d\t%+.2e\t%+.2e\t%.3e', ...
     0, primal_history(1), dual_history(1), ...
     abs((primal_history(1) - dual_history(1)) / dual_history(1)));
@@ -122,7 +122,8 @@ while true
     % second stopping criterion
     GAP = abs((primal_history(i + 1) - dual_history(i + 1)) / ...
         dual_history(i + 1));
-    if ~isnan(GAP) && (GAP <= tol)
+    if ~isnan(GAP) && max([GAP, F_con(i + 1), G_con(i + 1), ...
+            FS_con(i + 1), GS_con(i + 1)]) <= tol
         break;
     end
     
@@ -165,12 +166,9 @@ end
 % more output
 fprintf('\nSTOPPING AT CRITERION:\n\n\t');
 if i == maxIter
-    fprintf('MAX NUMBER OF ITERATIONS REACHED\ti = %d\n\n', maxIter);
+    fprintf('MAX NUMBER OF ITERATIONS REACHED\n\n');
 else
-    fprintf(['TOLERANCE FOR NORMALIZED GAP REACHED\t', ...
-        '%.2e <= %.2e\n\n'], ...
-        abs((primal_history(i + 1) - dual_history(i + 1)) / ...
-        dual_history(i + 1)), tol);
+    fprintf('TOLERANCE FOR GAP & INFEASIBILITIES REACHED\n\n');
     
     % delete redundant entries
     primal_history(i + 2 : end) = [];
