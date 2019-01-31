@@ -17,14 +17,14 @@ end
 fprintf('%sTESTING NUCLEAR NORM DISTANCE MEASURE%s\n', ...
     repmat('~', 21, 1), repmat('~', 22, 1));
 
-answer = [];
-while isempty(answer) || ~(answer == 1 || answer == 2)
-    fprintf('\nNUCLEAR AS:\n\n');
+version = [];
+while isempty(version) || ~(version == 1 || version == 2 || version == 3)
+    fprintf('\nNUCLEAR NORM AS:\n\n');
     fprintf('\t1\tSOFT CONSTRAINT\n');
-    fprintf('\t2\tHARD CONSTRAINT\n\n');
-    answer = str2num(input('YOUR CHOICE: ','s'));
+    fprintf('\t2\tHARD CONSTRAINT\n');
+    fprintf('\t3\tHARD CONSTRAINT MODIFIED\n\n');
+    version = str2num(input('YOUR CHOICE: ','s'));
 end
-hard_constraint = (answer == 2);
 
 answer = [];
 while isempty(answer) || ...
@@ -62,40 +62,29 @@ vec = @(x) x(:);
 %% PRECOMPUTE WARPED IMAGES AND CORRESPONDING DATA TERM VALUES
 
 % placeholders for warped images
-numFrames = 51;
+numFrames = 31;
 t = linspace(-1, 1, numFrames);
 img_u = cell(numImg - 1, 1);
 for i = 1 : numImg - 1
     img_u{i} = zeros(m, n, numFrames);
 end
 
+% set image region
+omega = [0, 1, 0, 1];
+
+% get image center
+center = (omega([4, 2]) + omega([3, 1])) / 2;
+[xx, yy] = cell_centered_grid(omega, [m, n]);
+
 if answer == 1
-    
-    % select larger image region omega for translation
-    omega = [-1, 2, -1, 2];
     
     % direction of moving image
     dir = randn(1, 2);
     dir = dir / max(abs(dir));
     
-    % evaluate reference img{1} over omega
-    img{1} = evaluate_displacement(img{1}, h_img, zeros(m * n, 2), omega);
-    
-    % optimization parameters
-    mu = 60;
-    nu = 30;
-    tol = 5e-5;
-    maxIter = 200;
-    
 elseif answer == 2
     
-    % standard image region for rotation
-    omega = [0, 1, 0, 1];
-    
-    % cut out rounded image disk
-    [xx, yy] = cell_centered_grid(omega, [m, n]);
-    center = (omega([4, 2]) + omega([3, 1])) / 2;
-    
+    % cut out rounded image disk    
     R = 0.375;
     c_dist = sqrt((xx(:) - center(1)) .^ 2 + (yy(:) - center(2)) .^ 2);
     tmp = (1 - c_dist / R);
@@ -103,46 +92,9 @@ elseif answer == 2
     tmp(idx) = tmp(idx) .^ 0.5;
     tmp(~idx) = 0;
     mask = reshape(tmp, [m, n]);
-    %     mask = mvnpdf([xx(:), yy(:)], center, 0.02 * eye(2));
-    %     mask = reshape(mask / max(mask), [m, n]);
     for i = 1 : numImg
         img{i} = img{i} .* mask;
     end
-    
-    % optimization parameters
-    mu = 100;
-    nu = 30;
-    tol = 5e-5;
-    maxIter = 200;
-    
-elseif answer == 3
-    
-    % standard image region
-    omega = [0, 1, 0, 1];
-    center = (omega([4, 2]) + omega([3, 1])) / 2;
-    [xx, yy] = cell_centered_grid(omega, [m, n]);
-    
-    % optimization parameters
-    mu = 100;
-    nu = 80;
-    tol = 1e-4;
-    maxIter = 200;
-    
-elseif answer == 4
-    
-    % enlarge image region
-    omega = [-1, 2, -1, 2];
-    center = (omega([4, 2]) + omega([3, 1])) / 2;
-    [xx, yy] = cell_centered_grid(omega, [m, n]);
-    
-    % evaluate reference img{1} over omega
-    img{1} = evaluate_displacement(img{1}, h_img, zeros(m * n, 2), omega);
-    
-    % optimization parameters
-    mu = 60;
-    nu = 30;
-    tol = 1e-4;
-    maxIter = 200;
     
 end
 
@@ -159,11 +111,8 @@ tau = sqrt((1 - 1e-4) / norm_K ^ 2);
 sigma = tau;
 L0 = zeros(m * n * numImg, 1);
 P0 = L0;
-if hard_constraint
-    G = @(L, c_flag) nuclear_norm_constraint(L, numImg, tau, nu, c_flag);
-else
-    G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
-end
+tol = 5e-5;
+maxIter = 200;
 
 % track SSD for comparison
 SSD = zeros(numFrames, 1);
@@ -176,7 +125,8 @@ Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
 Dx(m, m) = 0;
 Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
 Dy(n, n) = 0;
-Gx = kron(speye(n), Dx);    Gy = kron(Dy, speye(m));
+Gx = kron(speye(n), Dx);
+Gy = kron(Dy, speye(m));
 A = kron(speye(2), [Gx; Gy]);
 
 % column major image matrix (fixed first column = reference)
@@ -188,31 +138,64 @@ for i = 1 : numFrames
     % compute warped images
     for j = 1 : numImg - 1
         
-        % warp image + store it
+        % warp image
         if answer == 1
+            
             u = t(i) * ones(m * n, 2) .* dir(j, :);
+            
         elseif answer == 2
+            
             u = [xx(:), yy(:)] - center;
             alpha = t(i) * pi;
             u = u * [cos(alpha), sin(alpha); -sin(alpha), cos(alpha)];
             u = u + center;
             u = u - [xx(:), yy(:)];
+            
         elseif answer == 3
+            
             u = [xx(:), yy(:)] - center;
             u = (1 - t(i)) ^ 2 * u;
             u = u + center;
             u = u - [xx(:), yy(:)];
+            
         elseif answer == 4
+           
             u = [xx(:), yy(:)] - center;
             u(:, 2) = u(:, 2) + t(i) * u(:, 1);
             u = u + center;
             u = u - [xx(:), yy(:)];
+            
         end
-        img_u{j}(:, :, i) = ...
-            evaluate_displacement(img{j + 1}, h_img, u, omega);
         
         % write warped image into corresponding I-column
+        img_u{j}(:, :, i) = ...
+            evaluate_displacement(img{j + 1}, h_img, u, omega);
         I(:, j + 1) = vec(img_u{j}(:, :, i));
+        
+    end
+    
+    if version == 1
+        
+        % set parameter mu
+        mu = 100;
+        G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
+        
+    elseif version == 2
+        
+        % compute nu from nuclear norm of I
+        [~, S, ~] = svd(I, 'econ');
+        nu = 0.9 * sum(diag(S));
+        G = @(L, c_flag) ...
+            nuclear_norm_constraint(L, numImg, tau, nu, c_flag);
+        
+    else
+        
+        % compute nu from nuclear norm of I - R
+        D = I - repmat(vec(img{1}), [1, numImg]);
+        [~, S, ~] = svd(D, 'econ');
+        nu = 0.9 * sum(diag(S));
+        G = @(L, c_flag) ...
+            nuclear_norm_constraint_mod(L, img{1}, tau, nu, c_flag);
         
     end
     
@@ -270,19 +253,21 @@ for i = 1 : numFrames
     if i == 1
         p1 = plot(1 : i, data_term(1 : i, 1), 'y', 'LineWidth', 2);
         hold on;
-        p4 = plot(i, data_term(i, 1), 'ro');
-        if ~hard_constraint
+        p4 = plot(i, data_term(i, 1), 'ro', 'HandleVisibility', 'off');
+        if version == 1
             p2 = plot(1 : i, data_term(1 : i, 2), '--m');
             p3 = plot(1 : i, data_term(1 : i, 3), '--g');
-            p5 = plot(i, data_term(i, 2), 'ro');
-            p6 = plot(i, data_term(i, 3), 'ro');
+            p5 = plot(i, data_term(i, 2), 'ro', 'HandleVisibility', 'off');
+            p6 = plot(i, data_term(i, 3), 'ro', 'HandleVisibility', 'off');
         end
         hold off;
         xlim([1, numFrames]);
         ylim([0, 1.25 * max(data_term(:, 1))]);
         set(gca, 'Color', 0.6 * ones(3, 1));
-        if hard_constraint
-            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu}');
+        if version == 2
+            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu} ( L )');
+        elseif version == 3
+            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu} ( L - R )');
         else
             title('\mu || L ||_* + || L - I(u) ||_1');
             legend('distance', '|| L - I(u) ||_1', '\mu || L ||_*', ...
@@ -291,7 +276,7 @@ for i = 1 : numFrames
     else
         set(p1, 'XData', 1 : i, 'YData', data_term(1 : i, 1));
         set(p4, 'XData', i, 'YData', data_term(i, 1));
-        if ~hard_constraint
+        if version == 1
             set(p2, 'XData', 1 : i, 'YData', data_term(1 : i, 2));
             set(p3, 'XData', 1 : i, 'YData', data_term(1 : i, 3));
             set(p5, 'XData', i, 'YData', data_term(i, 2));
