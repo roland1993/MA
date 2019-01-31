@@ -2,8 +2,8 @@
 clear all, close all, clc;
 
 % problem size
-m = 30;
-n = 20;
+m = 1000;
+n = 1000;
 
 % randomize operator and offset
 K = randi(3, m, n) - 2;
@@ -40,26 +40,26 @@ legend('primal energy', 'dual energy');     xlabel('#iter');
 
 function [res1, res2, res3] = test_F(y, sigma, conjugate_flag)
 
-res3 = 0;
+res2 = 0;
 if ~conjugate_flag
     res1 = 0.5 * sum(y .^ 2);
-    res2 = 1 / (1 + sigma) * y;
+    res3 = 1 / (1 + sigma) * y;
 else
     res1 = 0.5 * sum(y .^ 2);
-    res2 = 1 / (1 + sigma) * y;
+    res3 = 1 / (1 + sigma) * y;
 end
 
 end
 
 function [res1, res2, res3] = test_G(x, g, lambda, tau, conjugate_flag)
 
-res3 = 0;
+res2 = 0;
 if ~conjugate_flag
     res1 = 0.5 * lambda * sum((x(:) - g(:)) .^ 2);
-    res2 = 1 / (1 + (lambda * tau)) * (x + (lambda * tau) * g);
+    res3 = 1 / (1 + (lambda * tau)) * (x + (lambda * tau) * g);
 else
     res1 = lambda * (0.5 * sum((x / lambda) .^ 2) + ((x / lambda)' * g));
-    res2 = [];
+    res3 = [];
 end
 
 end
