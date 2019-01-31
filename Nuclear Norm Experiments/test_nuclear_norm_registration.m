@@ -34,29 +34,29 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % end
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-% % ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
-% m = 32;
-% n = 32;
-% numFrames = 7;
-% ex = 3;
-% A = createTestImage(m, n, numFrames, ex);
-% 
-% k = 3;
-% idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
-% img = cell(k + 1, 1);
-% for i = 1 : k + 1
-%     img{i} = A(:, :, idx(i));
-% end
-% 
-% % optimization parameters
-% theta = 1;
-% maxIter = 1000;
-% tol = 0;
-% outerIter = 15;
-% mu = 1e0;
-% nu_factor = 0.85;
-% bc = 'linear';
-% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% ~~~~~~~ SYNTHETIC IMAGE DATA ~~~~~~~
+m = 32;
+n = 32;
+numFrames = 7;
+ex = 3;
+A = createTestImage(m, n, numFrames, ex);
+
+k = 3;
+idx = ceil(numFrames / 2) - floor(k / 2) + (0 : k);
+img = cell(k + 1, 1);
+for i = 1 : k + 1
+    img{i} = A(:, :, idx(i));
+end
+
+% optimization parameters
+theta = 1;
+maxIter = 1000;
+tol = 1e-3;
+outerIter = 15;
+mu = 1e0;
+nu_factor = 0.85;
+bc = 'linear';
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % % ~~~~~~~ ROTATING STAR DATA ~~~~~~~
 % k = 1;
@@ -66,7 +66,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % % optimization parameters
 % theta = 1;
 % maxIter = 1000;
-% tol = 0;
+% tol = 1e-2;
 % outerIter = 20;
 % mu = 1e-1;
 % nu_factor = 0.98;
@@ -83,7 +83,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % % optimization parameters
 % theta = 1;
 % maxIter = 1000;
-% tol = 0;
+% tol = 1e-2;
 % outerIter = 5;
 % mu = 1e-1;
 % nu_factor = 0.95;
@@ -178,7 +178,7 @@ for o = 1 : outerIter
     A = [       A1,     A3
                 A2,     A4          ];
     
-    % estimate (squared) spectral norm of A via simple upper bound
+    % estimate spectral norm of A
     norm_A_est = normest(A);
     
     % use estimated norm to get primal and dual step sizes
