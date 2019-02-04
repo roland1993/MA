@@ -59,6 +59,9 @@ if nargin < 7
 end
 if nargin < 6, theta = 1; end
 
+% pre-compute transpose of K (for the sake of efficiency)
+Kt = K';
+
 % initialize iteration counter
 i = 0;
 
@@ -137,7 +140,7 @@ while true
     [~, ~, y_current] = F(y_current + sigma * (K * x_bar), true);
     
     % get x_{n+1} = [(id + tau dG)^(-1)](x_n - tau * K' * y_{n+1})
-    [~, ~, x_current] = G(x_current - tau * (K' * y_current), false);
+    [~, ~, x_current] = G(x_current - tau * (Kt * y_current), false);
     
     % record primal and dual objective value for current iterates
     [F_history(i + 1), G_history(i + 1), F_con(i + 1), G_con(i + 1)] = ...
@@ -200,14 +203,14 @@ dual_history = ...
 
     function [F_val, G_val, F_constraint, G_constraint] = ...
             primal_objective(x)
-        [F_val, F_constraint] = F(K*x, false);
+        [F_val, F_constraint] = F(K * x, false);
         [G_val, G_constraint] = G(x, false);
     end
 
     function [FS_val, GS_val, FStar_constraint, GStar_constraint] = ...
             dual_objective(y)
         [FS_val, FStar_constraint] = F(y, true);
-        [GS_val, GStar_constraint] = G(-K'*y, true);
+        [GS_val, GStar_constraint] = G(-(Kt * y), true);
     end
 
 %-------------------------------------------------------------------------%
