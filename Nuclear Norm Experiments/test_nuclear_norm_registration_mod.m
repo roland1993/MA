@@ -36,20 +36,20 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-% ~~~~~~~ ROTATING STAR DATA ~~~~~~~
-k = 1;
-img{1} = normalize(double(imread('rotation_star1.png')));
-img{2} = normalize(double(imread('rotation_star2.png')));
-
-% optimization parameters
-theta = 1;
-maxIter = 1000;
-tol = 1e-2;
-outerIter = 10;
-mu = 1e-1;
-nu_factor = 0.8;
-bc = 'linear';
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% % ~~~~~~~ ROTATING STAR DATA ~~~~~~~
+% k = 1;
+% img{1} = normalize(double(imread('rotation_star1.png')));
+% img{2} = normalize(double(imread('rotation_star2.png')));
+% 
+% % optimization parameters
+% theta = 1;
+% maxIter = 1000;
+% tol = 1e-2;
+% outerIter = 10;
+% mu = 1e-1;
+% nu_factor = 0.8;
+% bc = 'linear';
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % % ~~~~~~~ SLIDING RECT DATA ~~~~~~~
 % k = 1;
@@ -67,6 +67,27 @@ bc = 'linear';
 % nu_factor = 0.8;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+% ~~~~~~~~~ HEART MRI CINE ~~~~~~~~~
+k = 5;
+load('heart_mri.mat');
+IDX = floor(linspace(beats(1, 1), beats(1, 2), k + 1));
+factor = 4;
+for i = 1 : (k + 1)
+    % downsampling
+    tmp = conv2(data(:, :, IDX(i)), ones(factor) / factor ^ 2, 'same');
+    img{i} = tmp(1 : factor : end, 1 : factor : end);
+end
+
+% optimization parameters
+theta = 1;
+maxIter = 1000;
+tol = 1e-2;
+outerIter = 10;
+mu = 5e-2;
+nu_factor = 0.6;
+bc = 'linear';
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % get image resolution etc.
 [m, n] = size(img{1});
