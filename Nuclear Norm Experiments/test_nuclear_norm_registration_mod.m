@@ -84,8 +84,8 @@ theta = 1;
 maxIter = 1000;
 tol = 1e-2;
 outerIter = 10;
-mu = 5e-2;
-nu_factor = 0.6;
+mu = 2e-2;
+nu_factor = 0.35;
 bc = 'linear';
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -140,6 +140,7 @@ figure(1);
 set(gcf, 'units', 'normalized', 'outerposition', [0 0 1 1]);
 figure(2);
 set(gcf, 'units', 'normalized', 'outerposition', [0 0 1 1]);
+green = cat(3, zeros(m, n), ones(m, n), zeros(m, n));
 
 for o = 1 : outerIter
 %-------------------------------------------------------------------------%
@@ -169,7 +170,7 @@ for o = 1 : outerIter
     D = [reshape(T_current, m * n, k), vec(R)] - ...
                                             repmat(vec(R), [1, k + 1]);
     [~, S, ~] = svd(D, 'econ');
-    nu = nu_factor * sum(diag(S));
+    nu = (nu_factor ^ (1 / outerIter)) * sum(diag(S));
     
     % upper left block of A ~> template image gradients
     A1 = [      -blkdiag(dT{:})
@@ -292,7 +293,6 @@ for o = 1 : outerIter
     colormap gray(256);
     
     for i = 1 : k
-        
         subplot(3, k + 1, i);
         set(gca, 'YDir', 'reverse');
         imagesc(...
@@ -301,13 +301,11 @@ for o = 1 : outerIter
             'CData', T(:, :, i));
         axis image;
         title(sprintf('template T_%d', i));
-        
         hold on;
         quiver(cc_grid(:, 2), cc_grid(:, 1), ...
             u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
 %         plot_grid(reshape(cc_grid + u_star(:, :, i), [m, n, 2]), 2);
         hold off;
-        
     end
     
     subplot(3, k + 1, k + 1);
@@ -320,7 +318,6 @@ for o = 1 : outerIter
     title('reference R');
     
     for i = 1 : k
-        
         subplot(3, k + 1, (k + 1) + i);
         set(gca, 'YDir', 'reverse');
         imagesc(...
@@ -329,7 +326,13 @@ for o = 1 : outerIter
             'CData', T_u(:, :, i));
         axis image;
         title(sprintf('T_%d(u_%d)', i, i));
-        
+        hold on;
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', green, ...
+            'AlphaData', abs(R - T_u(:, :, i)));
+        hold off;
     end
     
     for i = 1 : (k + 1)
@@ -338,9 +341,10 @@ for o = 1 : outerIter
         imagesc(...
             'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
             'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-            'CData', L_star(:, :, i));
+            'CData', L_star(:, :, i) - R);
         axis image;
-        title(sprintf('low rank component l_%d', i));
+        colorbar;
+        title(sprintf('low rank component l_%d - R', i));
     end
     
     % pause until button press
