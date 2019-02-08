@@ -29,10 +29,10 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % % optimization parameters
 % theta = 1;
 % maxIter = 1000;
-% tol = 1e-3;
+% tol = 1e-2;
 % outerIter = 15;
 % mu = 1e0;
-% nu_factor = 0.8;
+% nu_factor = 0.1;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -47,7 +47,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % tol = 1e-2;
 % outerIter = 10;
 % mu = 1e-1;
-% nu_factor = 0.8;
+% nu_factor = 0.1;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -62,14 +62,14 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % theta = 1;
 % maxIter = 1000;
 % tol = 1e-2;
-% outerIter = 10;
+% outerIter = 5;
 % mu = 1e-1;
-% nu_factor = 0.8;
+% nu_factor = 0.1;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % ~~~~~~~~~ HEART MRI CINE ~~~~~~~~~
-k = 5;
+k = 3;
 load('heart_mri.mat');
 IDX = floor(linspace(beats(1, 1), beats(1, 2), k + 1));
 factor = 4;
@@ -83,9 +83,9 @@ end
 theta = 1;
 maxIter = 1000;
 tol = 1e-2;
-outerIter = 10;
+outerIter = 15;
 mu = 2e-2;
-nu_factor = 0.35;
+nu_factor = 0.4;
 bc = 'linear';
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
