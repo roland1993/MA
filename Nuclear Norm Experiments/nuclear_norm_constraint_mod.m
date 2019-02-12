@@ -1,8 +1,9 @@
 function [res1, res2, res3] = ...
-    nuclear_norm_constraint_mod(L, R, tau, nu, conjugate_flag)
+    nuclear_norm_constraint_mod(L, d, numImg, tau, nu, conjugate_flag)
 % IN:
-%       L               ~ m*n*numImg x 1    all images in one column vector
-%       R               ~ m x n             reference image
+%       L               ~ m*n*numImg x 1    input variables
+%       d               ~ m*n*numImg x 1    constant offset from input
+%       numImg          ~ 1 x 1             number of images in L
 %       tau             ~ 1 x 1             prox step size
 %       nu              ~ 1 x 1             constraint threshold
 %       conjugate_flag  ~ logical           eval. constraint or conjugate?
@@ -16,22 +17,21 @@ function [res1, res2, res3] = ...
 %       res2            ~ 1 x 1             constraint violation measure
 %       res3            ~ m*n x 1           prox-step of spectral norm
 
+% IMPLEMENTATION OF delta_{|| . ||_* <= nu}(L - d)
+
 % by default: evaluate constraint instead of its conjugate
-if nargin < 5, conjugate_flag = false; end
-
-% get number of images
-numImg = numel(L) / numel(R);
-
-% reshape L back into a matrix ~ m*n x numImg
-L = reshape(L, [], numImg);
+if nargin < 6, conjugate_flag = false; end
 
 % intialize error measure with zero
 res2 = 0;
 
 if ~conjugate_flag
     
-    % subtract reference R columnwise from L
-    L = L - repmat(R(:), [1, numImg]);
+    % subtract d from L
+    L = L - d;
+    
+    % reshape L back into a matrix ~ m*n x numImg
+    L = reshape(L, [], numImg);
     
     % compute svd of L
     [U, S, V] = svd(L, 'econ');
@@ -51,37 +51,33 @@ if ~conjugate_flag
         % l1-ball-projection of SV-vector
         res3 = U * diag(nu * l1ball_projection(S / nu)) * V';
         
-        % add R and reshape to vector format
-        res3 = res3 + repmat(R(:), [1, numImg]);
-        res3 = res3(:);
+        % reshape to vector format and add d
+        res3 = res3(:) + d;
         
     end
     
-else
+elseif conjugate_flag && nargout < 3
+    
+    % reshape L back into a matrix ~ m*n x numImg
+    L = reshape(L, [], numImg);
     
     % get SVD of L
     [~, S, ~] = svd(L, 'econ');
     S = diag(S);
     
     % conjugate of nn-constraint = spectral norm = max singular value
-    %   + <L, R>
-    res1 = nu * max(S) + L(:)' * repmat(R(:), [numImg, 1]);
+    %   + <L, d>
+    res1 = nu * max(S) + L(:)' * d;
     
-    % compute prox of spectral norm via prox of inf-norm of sv-vector S
-    if nargout == 3
-        
-%         % nu and tau in one factor
-%         mu = nu * tau;
-%         
-%         % prox on S via Moreau's identity
-%         %   -> conjugate of inf-norm is l1-ball indicator
-%         S_prox = S - mu * l1ball_projection(S / mu);
-%         
-%         % use prox step of sv-vector to compute prox of spectral norm
-%         res3 = U * diag(S_prox) * V';
-%         res3 = res3(:);
-        
-    end
+else
+    
+    res1 = [];
+    res2 = [];
+    
+    % compute conjugate prox via Moreau
+    [~, ~, prox] = nuclear_norm_constraint_mod( ...
+        L(:) / tau, d, numImg, 1 / tau, nu, false);
+    res3 = L(:) - tau * prox;
     
 end
 
