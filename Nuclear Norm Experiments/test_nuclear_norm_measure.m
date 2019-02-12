@@ -194,8 +194,9 @@ for i = 1 : numFrames
         D = I - repmat(vec(img{1}), [1, numImg]);
         [~, S, ~] = svd(D, 'econ');
         nu = 0.9 * sum(diag(S));
-        G = @(L, c_flag) ...
-            nuclear_norm_constraint_mod(L, img{1}, tau, nu, c_flag);
+        d = repmat(vec(img{1}), [numImg, 1]);
+        G = @(L, c_flag) nuclear_norm_constraint_mod( ...
+            L, d, numImg, tau, nu, c_flag);
         
     end
     
