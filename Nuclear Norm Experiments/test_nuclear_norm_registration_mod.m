@@ -51,43 +51,43 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-% % ~~~~~~~ SLIDING RECT DATA ~~~~~~~
-% k = 1;
-% img{1} = double(rgb2gray(imread('sr1.png')));
-% img{1} = normalize(img{1});
-% img{2} = double(rgb2gray(imread('sr2.png')));
-% img{2} = normalize(img{2});
-% 
-% % optimization parameters
-% theta = 1;
-% maxIter = 1000;
-% tol = 1e-2;
-% outerIter = 5;
-% mu = 1e-1;
-% nu_factor = 0.1;
-% bc = 'linear';
-% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-% ~~~~~~~~~ HEART MRI CINE ~~~~~~~~~
-k = 3;
-load('heart_mri.mat');
-IDX = floor(linspace(beats(1, 1), beats(1, 2), k + 1));
-factor = 4;
-for i = 1 : (k + 1)
-    % downsampling
-    tmp = conv2(data(:, :, IDX(i)), ones(factor) / factor ^ 2, 'same');
-    img{i} = tmp(1 : factor : end, 1 : factor : end);
-end
+% ~~~~~~~ SLIDING RECT DATA ~~~~~~~
+k = 1;
+img{1} = double(rgb2gray(imread('sr1.png')));
+img{1} = normalize(img{1});
+img{2} = double(rgb2gray(imread('sr2.png')));
+img{2} = normalize(img{2});
 
 % optimization parameters
 theta = 1;
 maxIter = 1000;
 tol = 1e-2;
-outerIter = 15;
-mu = 2e-2;
-nu_factor = 0.4;
+outerIter = 5;
+mu = 1e-1;
+nu_factor = 0.1;
 bc = 'linear';
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+% % ~~~~~~~~~ HEART MRI CINE ~~~~~~~~~
+% k = 3;
+% load('heart_mri.mat');
+% IDX = floor(linspace(beats(1, 1), beats(1, 2), k + 1));
+% factor = 4;
+% for i = 1 : (k + 1)
+%     % downsampling
+%     tmp = conv2(data(:, :, IDX(i)), ones(factor) / factor ^ 2, 'same');
+%     img{i} = tmp(1 : factor : end, 1 : factor : end);
+% end
+% 
+% % optimization parameters
+% theta = 1;
+% maxIter = 1000;
+% tol = 1e-2;
+% outerIter = 15;
+% mu = 2e-2;
+% nu_factor = 0.4;
+% bc = 'linear';
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 % get image resolution etc.
 [m, n] = size(img{1});
@@ -110,24 +110,7 @@ x = zeros((3 * k + 1) * m * n, 1);
 p = zeros((5 * k + 1) * m * n, 1);
 
 % lower left block of A ~> gradient operator on displacements u
-Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
-if strcmp(bc, 'linear')
-    Dx(m, [m - 1, m]) = [-1, 1];
-elseif strcmp(bc, 'neumann')
-    Dx(m, m) = 0;
-else
-    error('Unknown boundary condition!');
-end
-Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
-if strcmp(bc, 'linear')
-    Dy(n, [n - 1, n]) = [-1, 1];
-elseif strcmp(bc, 'neumann')
-    Dy(n, n) = 0;
-else
-    error('Unknown boundary condition!');
-end
-D = kron(speye(2), [kron(speye(n), Dx); kron(Dy, speye(m))]);
-A2 = kron(speye(k), D);
+A2 = finite_difference_operator(m, n, h_grid, k, bc);
 
 % upper right block of A ~> identity matrix
 A3 = speye((k + 1) * m * n);
@@ -168,7 +151,7 @@ for o = 1 : outerIter
     
     % estimate threshold nu from nuclear norm of column-wise images
     D = [reshape(T_current, m * n, k), vec(R)] - ...
-                                            repmat(vec(R), [1, k + 1]);
+            repmat(vec(R), [1, k + 1]);
     [~, S, ~] = svd(D, 'econ');
     nu = (nu_factor ^ (1 / outerIter)) * sum(diag(S));
     
@@ -188,7 +171,8 @@ for o = 1 : outerIter
     sigma = sqrt(0.95 / norm_A_est ^ 2);
     
     % get function handle to G-part of target function
-    G_handle = @(x, c_flag) G(x, R, tau, nu, c_flag);
+    d = repmat(vec(R), [(k + 1), 1]);
+    G_handle = @(x, c_flag) G(x, d, k + 1, tau, nu, c_flag);
     
     % get function handle to F-part of target function
     F_handle = @(y, c_flag) F(y, b, k + 1, mu, sigma, c_flag);
@@ -361,13 +345,13 @@ end
 
 %% LOCAL FUNCTION DEFINITIONS
 
-function [res1, res2, res3] = G(x, R, tau, nu, conjugate_flag)
+function [res1, res2, res3] = G(x, d, numImg, tau, nu, conjugate_flag)
 % extends nuclear_norm_constraint.m to work on inputs x = [u; l]
 %   with u <-> displacement fields and l <-> low rank images
 
 % get number of template images and number of pixels per image
-mn = numel(R);
-k = (numel(x) / mn - 1) / 3;
+k = numImg - 1;
+mn = numel(x) / (3 * k + 1);
 
 % split input x into u- and l-part
 u = x(1 : 2 * k * mn);
@@ -377,7 +361,7 @@ l = x(2 * k * mn + 1 : end);
 if nargout == 3
     
     [res1, res2, res3] = ...
-        nuclear_norm_constraint_mod(l, R, tau, nu, conjugate_flag);
+        nuclear_norm_constraint_mod(l, d, numImg, tau, nu, conjugate_flag);
     
     if ~conjugate_flag
         % prox for 0 * u is identity
@@ -391,8 +375,7 @@ if nargout == 3
 else
     
     [res1, res2] = ...
-        nuclear_norm_constraint_mod(l, R, tau, nu, conjugate_flag);
-    
+        nuclear_norm_constraint_mod(l, d, numImg, tau, nu, conjugate_flag);
     if conjugate_flag
         res2 = max(res2, max(abs(u(:))));
     end
