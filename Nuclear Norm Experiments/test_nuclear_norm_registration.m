@@ -111,24 +111,7 @@ x = zeros((3 * k + 1) * m * n, 1);
 p = zeros((5 * k + 1) * m * n, 1);
 
 % lower left block of A ~> gradient operator on displacements u
-Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
-if strcmp(bc, 'linear')
-    Dx(m, [m - 1, m]) = [-1, 1];
-elseif strcmp(bc, 'neumann')
-    Dx(m, m) = 0;
-else
-    error('Unknown boundary condition!');
-end
-Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
-if strcmp(bc, 'linear')
-    Dy(n, [n - 1, n]) = [-1, 1];
-elseif strcmp(bc, 'neumann')
-    Dy(n, n) = 0;
-else
-    error('Unknown boundary condition!');
-end
-D = kron(speye(2), [kron(speye(n), Dx); kron(Dy, speye(m))]);
-A2 = kron(speye(k), D);
+A2 = finite_difference_operator(m, n, h_grid, k, bc);
 
 % upper right block of A ~> identity matrix
 A3 = speye((k + 1) * m * n);
@@ -302,9 +285,9 @@ for o = 1 : outerIter
         title(sprintf('template T_%d', i));
         
         hold on;
-%         quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-%             u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
-        plot_grid(reshape(cc_grid + u_star(:, :, i), [m, n, 2]), 2);
+        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+            u_star(:, 2, i), u_star(:, 1, i), 0, 'r');
+%         plot_grid(reshape(cc_grid + u_star(:, :, i), [m, n, 2]), 2);
         hold off;
         
     end
