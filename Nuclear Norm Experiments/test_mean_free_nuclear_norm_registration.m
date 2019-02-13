@@ -32,7 +32,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % tol = 1e-2;
 % outerIter = 15;
 % mu = 1e0;
-% nu_factor = 0.1;
+% nu_factor = 0.85;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -47,7 +47,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % tol = 1e-2;
 % outerIter = 10;
 % mu = 1e-1;
-% nu_factor = 0.1;
+% nu_factor = 0.8;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -64,7 +64,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % tol = 1e-2;
 % outerIter = 5;
 % mu = 1e-1;
-% nu_factor = 0.1;
+% nu_factor = 0.65;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -85,7 +85,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % tol = 1e-2;
 % outerIter = 15;
 % mu = 2e-2;
-% nu_factor = 0.4;
+% nu_factor = 0.95;
 % bc = 'linear';
 % % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -94,6 +94,7 @@ m = 100;
 n = 100;
 k = 6;
 data = dynamicTestImage(m, n, k);
+img = cell(1, k);
 for i = 1 : k, img{i} = data(:, :, i);  end
 
 % optimization parameters
@@ -101,8 +102,8 @@ theta = 1;
 maxIter = 1000;
 tol = 1e-2;
 outerIter = 15;
-mu = 1e-1;
-nu_factor = 0.2;
+mu = 2e-1;
+nu_factor = 0.9;
 bc = 'linear';
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -147,6 +148,9 @@ fh2 = figure(2);
 set(fh2, 'units', 'normalized', 'outerposition', [0 0 1 1]);
 green = cat(3, zeros(m, n), ones(m, n), zeros(m, n));
 
+% track change in singluar values
+SV_history = zeros(k, outerIter);
+
 for o = 1 : outerIter
 %-------------------------------------------------------------------------%
 % BEGIN OUTER ITERATION
@@ -173,7 +177,7 @@ for o = 1 : outerIter
     % estimate threshold nu from nuclear norm of mean free images
     D = reshape(A6 * vec(T_current), m * n, k);
     [~, S, ~] = svd(D, 'econ');
-    nu = (nu_factor ^ (1 / outerIter)) * sum(diag(S));
+    nu = nu_factor * sum(diag(S));
     
     % upper left block of A ~> template image gradients
     A1 = -blkdiag(dT{:});
@@ -200,7 +204,7 @@ for o = 1 : outerIter
     [x, p, primal_history, dual_history] = chambolle_pock(...
         F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
     
-    %% ITERATIVE OUTPUT
+    % ITERATIVE OUTPUT
     
     % plot primal & dual energies
     figure(fh1);
@@ -287,6 +291,10 @@ for o = 1 : outerIter
     L_star = x_star(2 * k * m * n + 1 : end);
     L_star = reshape(L_star, m, n, k);
     
+    meanL = sum(L_star, 3) / k;
+    [~, SV, ~] = svd(reshape(L_star - meanL, [], k), 'econ');
+    SV_history(:, o) = vec(diag(SV));
+    
     % get cell-centered grid over omega for plotting purposes
     [cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
     cc_grid = [cc_x(:), cc_y(:)];
@@ -317,7 +325,6 @@ for o = 1 : outerIter
         title(sprintf('T_%d(u_%d)', i, i));
     end
     
-    meanL = sum(L_star, 3) / k;
     for i = 1 : k
         subplot(3, k, 2 * k + i);
         set(gca, 'YDir', 'reverse');
@@ -339,6 +346,39 @@ for o = 1 : outerIter
 % END OUTER ITERATION
 %-------------------------------------------------------------------------%
 end
+
+%% FINAL OUTPUT
+
+% figure;
+% colormap gray(256);
+% while true
+%     for i = 1 : size(T, 3)
+%         subplot(1, 2, 1);
+%         imshow(T(:, :, i), [0, 1], 'InitialMagnification', 'fit');
+%         title(sprintf('T_%d', i));
+%         subplot(1, 2, 2);
+%         imshow(T_u(:, :, i), [0, 1], 'InitialMagnification', 'fit');
+%         title(sprintf('T_%d(u_%d)', i, i));
+%         drawnow;
+%         waitforbuttonpress;
+%     end
+% end
+
+figure;
+names = cell(k + 1, 1);
+hold on;
+for i = 1 : k
+    plot(SV_history(i, :), '-x');
+    names{i} = ['\sigma_', num2str(i)];
+end
+plot(sum(SV_history, 1), '--x');
+names{k + 1} = '\Sigma_i \sigma_i';
+hold off;
+xlim([0.5, outerIter + 0.5]);
+xlabel('#outer iter');
+title('singular values of mean-free low-rank components');
+grid on;
+legend(names);
 
 %% LOCAL FUNCTION DEFINITIONS
 
