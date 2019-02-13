@@ -134,6 +134,9 @@ green = cat(3, zeros(m, n), ones(m, n), zeros(m, n));
 [cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
 cc_grid = [cc_x(:), cc_y(:)];
 
+% track change in singluar values
+SV_history = zeros(k, outerIter);
+
 for o = 1 : outerIter
 %-------------------------------------------------------------------------%
 % BEGIN OUTER ITERATION
@@ -267,6 +270,9 @@ for o = 1 : outerIter
         T_u(:, :, i) = ...
             evaluate_displacement(img{i}, h_img, u_star(:, :, i), omega);
     end
+    meanImg = sum(T_u, 3) / k;
+    [~, SV, ~] = svd(reshape(T_u - meanImg, [], k), 'econ');
+    SV_history(:, o) = vec(diag(SV));
     
     % display resulting displacements
     figure(fh2);
@@ -287,7 +293,6 @@ for o = 1 : outerIter
         axis image;
     end
     
-    meanImg = sum(T_u, 3) / k;
     for i = 1 : k
         subplot(2, k, k + i);
         imshow(T_u(:, :, i), [0, 1], 'InitialMagnification', 'fit');
@@ -297,7 +302,7 @@ for o = 1 : outerIter
             'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
             'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
             'CData', green, ...
-            'AlphaData', abs(meanImg - T_u(:, :, i)));
+            'AlphaData', abs(T_u(:, :, i) - meanImg));
         hold off;
     end
     
@@ -316,21 +321,36 @@ end
 
 %% FINAL OUTPUT
 
-figure;
-colormap gray(256);
+% figure;
+% colormap gray(256);
+% while true
+%     for i = 1 : size(T, 3)
+%         subplot(1, 2, 1);
+%         imshow(T(:, :, i), [0, 1], 'InitialMagnification', 'fit');
+%         title(sprintf('T_%d', i));
+%         subplot(1, 2, 2);
+%         imshow(T_u(:, :, i), [0, 1], 'InitialMagnification', 'fit');
+%         title(sprintf('T_%d(u_%d)', i, i));
+%         drawnow;
+%         waitforbuttonpress;
+%     end
+% end
 
-while true
-    for i = 1 : size(T, 3)
-        subplot(1, 2, 1);
-        imshow(T(:, :, i), [0, 1], 'InitialMagnification', 'fit');
-        title(sprintf('T_%d', i));
-        subplot(1, 2, 2);
-        imshow(T_u(:, :, i), [0, 1], 'InitialMagnification', 'fit');
-        title(sprintf('T_%d(u_%d)', i, i));
-        drawnow;
-        waitforbuttonpress;
-    end
+figure;
+names = cell(k + 1, 1);
+hold on;
+for i = 1 : k
+    plot(SV_history(i, :), '-x');
+    names{i} = ['\sigma_', num2str(i)];
 end
+plot(sum(SV_history, 1), '--x');
+names{k + 1} = '\Sigma_i \sigma_i';
+hold off;
+xlim([0.5, outerIter + 0.5]);
+xlabel('#outer iter');
+title('singular values of mean-free images');
+grid on;
+legend(names);
 
 %% LOCAL FUNCTION DEFINITIONS
 
