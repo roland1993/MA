@@ -15,7 +15,7 @@ k = length(img) - 1;
 tempIdx = setdiff(1 : k + 1, refIdx);
 
 % normalize images to range [0, 1]
-for i = 1 : k + 1, img{i} = normalize(img{i}); end
+for i = 1 : (k + 1), img{i} = normalize(img{i}); end
 
 % get reference image, image resolution etc.
 R = img{refIdx};
