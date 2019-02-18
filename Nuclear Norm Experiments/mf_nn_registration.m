@@ -217,9 +217,9 @@ end
 
         % plot primal vs. dual energy
         subplot(2, 2, 1);
-        plot(primal_history{o}(:, 1), 'LineWidth', 1.5);
+        plot(primal_history{o}(:, 1));
         hold on;
-        plot(dual_history{o}(:, 1), 'LineWidth', 1.5);
+        plot(dual_history{o}(:, 1));
         hold off;
         axis tight;
         grid on;
@@ -233,7 +233,7 @@ end
         GAP = abs((primal_history{o}(:, 1) - dual_history{o}(:, 1)) ./ ...
             dual_history{o}(:, 1));
         subplot(2, 2, 2);
-        semilogy(GAP, 'LineWidth', 1.5);
+        semilogy(GAP);
         axis tight;
         grid on;
         xlabel('#iter');
@@ -259,10 +259,10 @@ end
         
         % plot different components of F
         subplot(2, 2, 4);
-        plot(primal_history{o}(:, 1), 'LineWidth', 1.5);
+        plot(primal_history{o}(:, 1));
         hold on;
-        plot(primal_history{o}(:, 2), 'LineWidth', 1.5);
-        plot(primal_history{o}(:, 3), 'LineWidth', 1.5);
+        plot(primal_history{o}(:, 2));
+        plot(primal_history{o}(:, 3));
         hold off;
         axis tight;
         ylim([0, max(primal_history{o}(:, 1))]);
