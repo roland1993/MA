@@ -32,46 +32,82 @@ cc_grid = [cc_x(:), cc_y(:)];
 % get green image for visualizing image differences
 green = cat(3, zeros(m, n), ones(m, n), zeros(m, n));
 
-% get mean of L
-meanL = sum(L, 3) / (k + 1);
-
 % do the plotting
 figure;
 colormap gray(256);
 
-for i = 1 : (k + 1)
+if nargin == 4
     
-    subplot(3, k + 1, i);
-    imshow(img{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
-    if i <= k
+    % get mean of L
+    meanL = sum(L, 3) / (k + 1);
+    
+    for i = 1 : (k + 1)
+        
+        subplot(3, k + 1, i);
+        imshow(img{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
+        if i <= k
+            hold on;
+            quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+                u(:, 2, i), u(:, 1, i), 0, 'r');
+            hold off;
+            title(sprintf('T_%d with u_%d', i, i));
+        else
+            title('R');
+        end
+        
+        subplot(3, k + 1, (k + 1) + i);
+        imshow(img_u{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
         hold on;
-        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-            u(:, 2, i), u(:, 1, i), 0, 'r');
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', green, ...
+            'AlphaData', abs(img_u{IDX(i)} - L(:, :, i)));
         hold off;
-        title(sprintf('T_%d with u_%d', i, i));
-    else
-        title('R');
+        if i <= k
+            title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - l_%d|', ...
+                i, i, i, i, i));
+        else
+            title(sprintf('R with |R - l_%d|', i));
+        end
+        
+        subplot(3, k + 1, 2 * (k + 1) + i);
+        imshow(L(:, :, i) - meanL, [-1 1], 'InitialMagnification', 'fit');
+        title(sprintf('l_%d - l_{mean}', i));
+        
     end
     
-    subplot(3, k + 1, (k + 1) + i);
-    imshow(img_u{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
-    hold on;
-    imagesc(...
-        'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
-        'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
-        'CData', green, ...
-        'AlphaData', abs(img_u{IDX(i)} - L(:, :, i)));
-    hold off;
-    if i <= k
-        title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - l_%d|', ...
-            i, i, i, i, i));
-    else
-        title(sprintf('R with |R - l_%d|', i));
-    end
+else
     
-    subplot(3, k + 1, 2 * (k + 1) + i);
-    imshow(L(:, :, i) - meanL, [-1 1], 'InitialMagnification', 'fit');
-    title(sprintf('l_%d - l_{mean}', i));
+    for i = 1 : (k + 1)
+        
+        subplot(2, k + 1, i);
+        imshow(img{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
+        if i <= k
+            hold on;
+            quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+                u(:, 2, i), u(:, 1, i), 0, 'r');
+            hold off;
+            title(sprintf('T_%d with u_%d', i, i));
+        else
+            title('R');
+        end
+        
+        if i <= k
+            subplot(2, k + 1, (k + 1) + i);
+            imshow(img_u{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
+            hold on;
+            imagesc(...
+                'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+                'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+                'CData', green, ...
+                'AlphaData', abs(img_u{IDX(i)} - R));
+            hold off;
+            title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - R|', ...
+                i, i, i, i, i));
+        end
+        
+    end
     
 end
 
