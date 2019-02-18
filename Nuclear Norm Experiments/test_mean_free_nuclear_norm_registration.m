@@ -99,10 +99,10 @@ for i = 1 : k, img{i} = data(:, :, i);  end
 
 % optimization parameters
 theta = 1;
-maxIter = 1000;
-tol = 1e-2;
-outerIter = 15;
-mu = 2e-1;
+maxIter = 2000;
+tol = 1e-3;
+outerIter = 20;
+mu = 5e-1;
 nu_factor = 0.9;
 bc = 'linear';
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,7 +175,11 @@ for o = 1 : outerIter
     end
     
     % estimate threshold nu from nuclear norm of mean free images
-    D = reshape(A6 * vec(T_current), m * n, k);
+    if o == 1
+        D = reshape(A6 * vec(T_current), m * n, k);
+    else
+        D = reshape(A6 * vec(L_star), m * n, k);
+    end
     [~, S, ~] = svd(D, 'econ');
     nu = nu_factor * sum(diag(S));
     
@@ -211,7 +215,7 @@ for o = 1 : outerIter
     clf;
     set(fh1, 'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
     
-    subplot(2, 3, 1);
+    subplot(2, 2, 1);
     hold on;
     plot(primal_history(:, 1), 'LineWidth', 1.5);
     plot(dual_history(:, 1), 'LineWidth', 1.5);
@@ -226,7 +230,7 @@ for o = 1 : outerIter
     
     GAP = abs((primal_history(:, 1) - dual_history(:, 1)) ./ ...
         dual_history(:, 1));
-    subplot(2, 3, 2);
+    subplot(2, 2, 2);
     semilogy(GAP, 'LineWidth', 1.5);
     axis tight;
     grid on;
@@ -235,12 +239,12 @@ for o = 1 : outerIter
         'Location', 'SouthOutside', 'Orientation', 'Horizontal');
     title('primal-dual gap');
     
-    subplot(2, 3, 3);
-    semilogy(primal_history(:, 4));
+    subplot(2, 2, 3);
+    semilogy(primal_history(:, 6));
     hold on;
-    semilogy(primal_history(:, 5));
-    semilogy(dual_history(:, 4));
-    semilogy(dual_history(:, 5));
+    semilogy(primal_history(:, 7));
+    semilogy(dual_history(:, 6));
+    semilogy(dual_history(:, 7));
     hold off;
     axis tight;
     grid on;
@@ -249,33 +253,21 @@ for o = 1 : outerIter
         'Location', 'SouthOutside', 'Orientation', 'Horizontal');
     title('constraints');
     
-    subplot(2, 3, 4);
+    subplot(2, 2, 4);
+    plot(primal_history(:, 1), '--' ,'LineWidth', 1.5);
     hold on;
-    plot(primal_history(:, 1), 'LineWidth', 1.5);
-    plot(primal_history(:, 2), '--', 'LineWidth', 1.5);
-    plot(primal_history(:, 3), '--', 'LineWidth', 1.5);
+    plot(primal_history(:, 2) ,'LineWidth', 1.5);
+    plot(primal_history(:, 3) ,'LineWidth', 1.5);
+    plot(primal_history(:, 4) ,'LineWidth', 1.5);
     hold off;
     axis tight;
     grid on;
     xlabel('#iter');
-    legend({'F(Kx) + G(x)', 'F(Kx)', 'G(x)'}, ...
+    legend(...
+        {'F', '\Sigma_i || T_i(u_i) - l_i ||_1', '\Sigma_i TV (u_i)', ...
+        '\delta_{|| . || <= \nu} (L - l_{mean})'}, ...
         'FontSize', 12, 'Location', 'SouthOutside', ...
         'Orientation', 'Horizontal');
-    title('primal objective');
-    
-    subplot(2, 3, 5);
-    hold on;
-    plot(dual_history(:, 1), 'LineWidth', 1.5);
-    plot(-dual_history(:, 2), '--', 'LineWidth', 1.5);
-    plot(-dual_history(:, 3), '--', 'LineWidth', 1.5);
-    hold off;
-    axis tight;
-    grid on;
-    xlabel('#iter');
-    legend({'-[F*(y) + G*(-K*y)]', '-F*(y)', '-G*(-K*y)'}, ...
-        'FontSize', 12, 'Location', 'SouthOutside', ...
-        'Orientation', 'Horizontal');
-    title('dual objective');
     
     % evaluate minimizer x_star = [u_star; L_star]
     x_star = x;
@@ -335,6 +327,7 @@ for o = 1 : outerIter
     end
     
     drawnow;
+    
 %     % pause until button press
 %     if o < outerIter
 %         str = [sprintf('%s ITERATION #%d FINISHED %s\n\n', ...
@@ -396,37 +389,65 @@ y1 = y(1 : k * mn);
 y2 = y(k * mn + 1 : 5 * k * mn);
 y3 = y(5 * k * mn + 1 : end);
 
-% apply F1 = SAD to y1-part
-[res1_F1, res2_F1, res3_F1] = SAD(y1, b, sigma, conjugate_flag);
-
-% initialize outputs with outputs from F1
-res1 = res1_F1;
-res2 = res2_F1;
-res3 = zeros(6 * k * mn, 1);
-res3(1 : k * mn) = res3_F1;
-
-% apply mu * ||.||_{2,1} to each of the k components y2_i of y2
-y2 = reshape(y2, 4 * mn, k);
-for i = 1 : k
+if nargout == 3
     
-    [res1_F2, res2_F2, res3_F2] = ...
-        norm21(y2(:, i), mu, sigma, conjugate_flag);
+    % apply F1 = SAD to y1-part
+    [~, ~, res3_F1] = SAD(y1, b, sigma, conjugate_flag);
+    
+    % initialize outputs with outputs from F1
+    res3 = zeros(6 * k * mn, 1);
+    res3(1 : k * mn) = res3_F1;
+    
+    % apply mu * ||.||_{2,1} to each of the k components y2_i of y2
+    y2 = reshape(y2, 4 * mn, k);
+    for i = 1 : k
+        
+        [~, ~, res3_F2] = norm21(y2(:, i), mu, sigma, conjugate_flag);
+        % update outputs
+        res3(k * mn + (i - 1) * 4 * mn + 1 : k * mn + i * 4 * mn) = ...
+            res3_F2;
+        
+    end
+    
+    % apply delta_{|| . ||_* <= nu} to y3
+    [~, ~, res3_F3] = ...
+        nuclear_norm_constraint(y3, k, sigma, nu, conjugate_flag);
     
     % update outputs
-    res1 = res1 + res1_F2;
-    res2 = max(res2, res2_F2);
-    res3(k * mn + (i - 1) * 4 * mn + 1 : ...
-        k * mn + i * 4 * mn) = res3_F2;
+    res3(5 * k * mn + 1 : end) = res3_F3;
+    
+    % dummy outputs
+    res1 = [];
+    res2 = [];
+    
+else
+    
+    % apply F1 = SAD to y1-part
+    [res1_F1, res2_F1] = SAD(y1, b, sigma, conjugate_flag);
+    
+    % apply mu * ||.||_{2,1} to each of the k components y2_i of y2
+    y2 = reshape(y2, 4 * mn, k);
+    res1_F2 = 0;
+    res2_F2 = 0;
+    for i = 1 : k
+        
+        [res1_F2_i, res2_F2_i] = ...
+            norm21(y2(:, i), mu, sigma, conjugate_flag);
+        
+        % update outputs
+        res1_F2 = res1_F2 + res1_F2_i;
+        res2_F2 = max(res2_F2, res2_F2_i);
+        
+    end
+    
+    % apply delta_{|| . ||_* <= nu} to y3
+    [res1_F3, res2_F3] = ...
+        nuclear_norm_constraint(y3, k, sigma, nu, conjugate_flag);
+    
+    % update outputs
+    res1 = [res1_F1, res1_F2, res1_F3];
+    res2 = max([res2_F1, res2_F2, res2_F3]);
     
 end
-
-% apply delta_{|| . ||_* <= nu} to y3
-[res1_F3, res2_F3, res3_F3] = ...
-    nuclear_norm_constraint(y3, k, sigma, nu, conjugate_flag);
-
-% update outputs
-res1 = res1 + res1_F3;
-res2 = max(res2, res2_F3);
-res3(5 * k * mn + 1 : end) = res3_F3;
 
 end
