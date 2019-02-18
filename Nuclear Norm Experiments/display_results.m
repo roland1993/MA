@@ -1,4 +1,4 @@
-function display_results(img, refIdx, u, L)
+function img_u = display_results(img, refIdx, u, L)
 
 % k = number of templates
 k = length(img) - 1;
@@ -71,7 +71,7 @@ for i = 1 : (k + 1)
     
     subplot(3, k + 1, 2 * (k + 1) + i);
     imshow(L(:, :, i) - meanL, [-1 1], 'InitialMagnification', 'fit');
-    title(sprintf('l_%d - l_{mean}', i, i));
+    title(sprintf('l_%d - l_{mean}', i));
     
 end
 
