@@ -14,11 +14,11 @@ p2 = 0.25 * rand * pi;
 
 for i = 1 : numFrames
     
-%     dx = -0.1 * sin(pi * (i) / numFrames);
-%     dy = 0.1 * cos(pi * (i) / numFrames);
+    dx = -0.1 * sin(pi * (i) / numFrames);
+    dy = 0.1 * cos(pi * (i) / numFrames);
 
-    dx = 0.1 * (rand - 0.5);
-    dy = 0.2 * (rand - 0.5);
+%     dx = 0.1 * (rand - 0.5);
+%     dy = 0.2 * (rand - 0.5);
     
     ellipse_rad = 0.4;
     ellipse = double( ...
@@ -48,7 +48,7 @@ for i = 1 : numFrames
     T(:, :, i) = imgaussfilt(rect + ellipse + frame, (m + n) / 150);
     
 end
-% 
+
 % figure;
 % colormap gray(256);
 % for i = 1 : numFrames
