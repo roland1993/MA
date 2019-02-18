@@ -14,25 +14,29 @@ p2 = 0.25 * rand * pi;
 
 for i = 1 : numFrames
     
-    dx = -0.1 * sin(pi * (i) / numFrames);
-    dy = 0.1 * cos(pi * (i) / numFrames);
+%     dx = -0.1 * sin(pi * (i) / numFrames);
+%     dy = 0.1 * cos(pi * (i) / numFrames);
+
+    dx = 0.1 * (rand - 0.5);
+    dy = 0.2 * (rand - 0.5);
     
     ellipse_rad = 0.4;
     ellipse = double( ...
-        sqrt(2 * (xx + dx - 0.2) .^ 2 + (yy + dy) .^ 2) <= ellipse_rad);
+        sqrt(2 * (xx + dx - 0.25) .^ 2 + (yy + dy) .^ 2) <= ellipse_rad);
     if mod(i, 2) == 0
         texture = sin(f1 * (yy + dy) + p1) .^ 2;
     else
         texture = sin(f2 * (xx + dx) + p2) .^ 2;
     end
-    IDX = sqrt(2 * (xx + dx - 0.2) .^ 2 + (yy + dy) .^ 2) ...
+    IDX = sqrt(2 * (xx + dx - 0.25) .^ 2 + (yy + dy) .^ 2) ...
             <= 0.6 * ellipse_rad;
     ellipse(IDX) = texture(IDX);
     
     % frame_rad = 0.7 + 0.05 * (i / numFrames);
     frame_rad = 0.7;
     frame_width = 0.15;
-    tmp = 0.9 + 0.1 * (i / numFrames);
+    % tmp = 0.9 + 0.1 * (i / numFrames);
+    tmp = 1;
     frame = double(reshape( ...
             frame_rad <= max(abs(tmp * [xx(:), yy(:)]), [], 2) & ...
             max(abs(tmp * [xx(:), yy(:)]), [], 2) <= ...
@@ -44,7 +48,7 @@ for i = 1 : numFrames
     T(:, :, i) = imgaussfilt(rect + ellipse + frame, (m + n) / 150);
     
 end
-
+% 
 % figure;
 % colormap gray(256);
 % for i = 1 : numFrames
