@@ -152,9 +152,10 @@ for i = 1 : numFrames
         
     end
     
-    % compute nu from nuclear norm of I
-    [~, S, ~] = svd(I, 'econ');
-    nu = 0.5 * sum(diag(S));
+    % compute nu from nuclear norm of mean-free I
+    tmp = reshape(B * vec(I), m * n, numImg);
+    [~, S, ~] = svd(tmp, 'econ');
+    nu = 0.9 * sum(diag(S));
     G = @(x, c_flag) zero_function(x, c_flag);
     
     % optimization to find data term value
@@ -210,7 +211,8 @@ for i = 1 : numFrames
         xlim([1, numFrames]);
         ylim([0, 1.25 * max(data_term(:))]);
         set(gca, 'Color', 0.6 * ones(3, 1));
-            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu} ( L )');
+        title(...
+            'min_L || L - I(u) ||_1 + \delta_{||.||_* <= \nu} ( B * L )');
     else
         set(p1, 'XData', 1 : i, 'YData', data_term(1 : i));
         set(p4, 'XData', i, 'YData', data_term(i));
