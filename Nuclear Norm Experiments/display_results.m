@@ -104,7 +104,7 @@ else
                 'AlphaData', abs(img_u{IDX(i)} - R));
             hold off;
             title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - R|', ...
-                i, i, i, i, i));
+                i, i, i, i));
         end
         
     end
