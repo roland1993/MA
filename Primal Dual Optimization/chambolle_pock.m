@@ -190,7 +190,7 @@ while true
     x_bar = x_current + theta * (x_current - x_old);
     
     % iterative output
-    if mod(i, 10) == 0
+    if mod(i, 1) == 0
         fprintf('%d\t%+.2e\t%+.2e\t%.3e', i, primal_history(i + 1), ...
             dual_history(i + 1), abs((primal_history(i + 1) - ...
             dual_history(i + 1)) / dual_history(i + 1)));
@@ -206,8 +206,11 @@ end
 % more output
 fprintf('\nSTOPPING AT CRITERION:\n\n\t');
 if i == maxIter
+    
     fprintf('MAX NUMBER OF ITERATIONS REACHED\n\n');
+    
 else
+    
     fprintf('TOLERANCE FOR GAP & INFEASIBILITIES REACHED\n\n');
     
     % delete redundant entries
