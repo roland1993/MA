@@ -154,7 +154,7 @@ end
         
         if nargout == 3
             
-            % initialiez output
+            % initialize output
             res3 = zeros((6 * k + 2) * mn, 1);
             
             % apply SAD to y1-part
