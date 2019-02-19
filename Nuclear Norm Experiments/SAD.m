@@ -1,9 +1,9 @@
 function [res1, res2, res3] = SAD(L, I, sigma, conjugate_flag)
 % IN:
-%       L               ~ m*n*numImg x 1    variable to
-%       I               ~ m*n*numImg x 1    all images in one column vector
+%       L               ~ m*n*numImg x 1    input variables
+%       I               ~ m*n*numImg x 1    I from SAD(L) = ||L - I||_1
 %       sigma           ~ 1 x 1             prox step size
-%       conjugate_flag  ~ logical           evaluate SAD or conjugate NN*?
+%       conjugate_flag  ~ logical           evaluate SAD or conjugate?
 % OUT:
 %   IF NOT conjugate_flag:
 %       res1            ~ 1 x 1             function value SAD(L)
