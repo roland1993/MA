@@ -22,7 +22,7 @@ while isempty(version) || ~(version == 1 || version == 2 || version == 3)
     fprintf('\nNUCLEAR NORM AS:\n\n');
     fprintf('\t1\tSOFT CONSTRAINT\n');
     fprintf('\t2\tHARD CONSTRAINT\n');
-    fprintf('\t3\tHARD CONSTRAINT MODIFIED\n\n');
+    fprintf('\t3\tMEAN-FREE HARD CONSTRAINT\n\n');
     version = str2num(input('YOUR CHOICE: ','s'));
 end
 
@@ -105,13 +105,30 @@ h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 %   -> set parameters for Chambolle-Pock scheme
 data_term = zeros(numFrames, 3);
 theta = 1;
-K = speye(m * n * numImg);
-norm_K = 1;
+
+if version <= 2
+    
+    K = speye(m * n * numImg);
+    norm_K = 1;
+    
+    L0 = zeros(m * n * numImg, 1);
+    P0 = zeros(m * n * numImg, 1);
+    
+else
+    
+    B = mean_free_operator(m, n, numImg);
+    K = [B; speye(m * n * numImg)];
+    norm_K = sqrt(2);
+    % ATTENTION: normest(K) PRODUCES FAULTY RESULTS!!!
+    
+    L0 = zeros(m * n * numImg, 1);
+    P0 = zeros(2 * m * n * numImg, 1);
+    
+end
+
 tau = sqrt((1 - 1e-4) / norm_K ^ 2);
 sigma = tau;
-L0 = zeros(m * n * numImg, 1);
-P0 = L0;
-tol = 5e-5;
+tol = 1e-4;
 maxIter = 200;
 
 % track SSD for comparison
@@ -121,13 +138,7 @@ SSD = zeros(numFrames, 1);
 TV = zeros(numFrames, 1);
 
 % define discrete gradient operator K for evaluation of TV
-Dx = (1 / h_grid(1)) * spdiags([-ones(m, 1), ones(m, 1)], 0 : 1, m, m);
-Dx(m, m) = 0;
-Dy = (1 / h_grid(2)) * spdiags([-ones(n, 1), ones(n, 1)], 0 : 1, n, n);
-Dy(n, n) = 0;
-Gx = kron(speye(n), Dx);
-Gy = kron(Dy, speye(m));
-A = kron(speye(2), [Gx; Gy]);
+A = finite_difference_operator(m, n, h_grid);
 
 % column major image matrix (fixed first column = reference)
 I = zeros(m * n, numImg);
@@ -179,6 +190,7 @@ for i = 1 : numFrames
         % set parameter mu
         mu = 100;
         G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
+        F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
         
     elseif version == 2
         
@@ -187,21 +199,20 @@ for i = 1 : numFrames
         nu = 0.9 * sum(diag(S));
         G = @(L, c_flag) ...
             nuclear_norm_constraint(L, numImg, tau, nu, c_flag);
+        F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
         
     else
         
-        % compute nu from nuclear norm of I - R
-        D = I - repmat(vec(img{1}), [1, numImg]);
+        % compute nu from nuclear norm of mean-free I
+        D = reshape(B * vec(I), m * n, numImg);
         [~, S, ~] = svd(D, 'econ');
         nu = 0.9 * sum(diag(S));
-        d = repmat(vec(img{1}), [numImg, 1]);
-        G = @(L, c_flag) nuclear_norm_constraint_mod( ...
-            L, d, numImg, tau, nu, c_flag);
+        G = @(L, c_flag) zero_function(L, c_flag);
+        F = @(y, c_flag) F_composite(y, numImg, sigma, nu, I(:), c_flag);
         
     end
     
     % optimization to find data term value
-    F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
     [~, ~, primal_history, ~] = ...
         chambolle_pock(F, G, K, L0, P0, theta, tau, sigma, maxIter, tol);
     data_term(i, :) = primal_history(end, 1 : 3);
@@ -266,11 +277,13 @@ for i = 1 : numFrames
         ylim([0, 1.25 * max(data_term(:, 1))]);
         set(gca, 'Color', 0.6 * ones(3, 1));
         if version == 2
-            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu} ( L )');
+            title(['min_L || L - I(u) ||_1 +', ...
+                ' \delta_{||.||_* <= \nu} ( L )']);
         elseif version == 3
-            title('|| L - I(u) ||_1 + \delta_{||.||_* <= \nu} ( L - R )');
+            title(['min_L || L - I(u) ||_1 +', ...
+                ' \delta_{||.||_* <= \nu} ( B * L )']);
         else
-            title('\mu || L ||_* + || L - I(u) ||_1');
+            title('min_L \mu || L ||_* + || L - I(u) ||_1');
             legend('distance', '|| L - I(u) ||_1', '\mu || L ||_*', ...
                 'Location', 'SouthOutside', 'Orientation', 'Horizontal');
         end
@@ -320,4 +333,25 @@ for i = 1 : numFrames
     drawnow;
     pause(0.1);
     
+end
+
+%% LOCAL FUNCTION DEFINITIONS
+
+function [res1, res2, res3] = ...
+    F_composite(y, numImg, sigma, nu, b, conjugate_flag)
+
+mn = numel(y) / (2 * numImg);
+y1 = y(1 : numImg * mn);
+y2 = y(numImg * mn + 1 : end);
+
+[res1_F1, res2_F1, res3_F1] = ...
+    nuclear_norm_constraint(y1, numImg, sigma, nu, conjugate_flag);
+
+[res1_F2, res2_F2, res3_F2] = ...
+    SAD(y2, b, sigma, conjugate_flag);
+
+res1 = res1_F1 + res1_F2;
+res2 = max([res2_F1, res2_F2]);
+res3 = [res3_F1; res3_F2];
+
 end
