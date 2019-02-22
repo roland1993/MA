@@ -98,17 +98,17 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % ~~~~~~~~~ DYNAMIC TEST IMAGES ~~~~~~~~~
 m = 100;
 n = 100;
-k = 6;
+k = 8;
 data = dynamicTestImage(m, n, k);
 img = cell(1, k);
 for i = 1 : k, img{i} = data(:, :, i);  end
 
-% optimization parameters
+% optimization parameters - OPTIMIZED!
 theta = 1;
 maxIter = 2000;
 tol = 1e-3;
 outerIter = 20;
-mu = 5e-1;
+mu = 1e-1;
 nu_factor = 0.9;
 bc = 'linear';
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -347,7 +347,7 @@ for o = 1 : outerIter
 end
 
 %% FINAL OUTPUT
-
+% 
 % figure;
 % colormap gray(256);
 % while true
