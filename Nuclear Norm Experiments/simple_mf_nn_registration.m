@@ -1,5 +1,28 @@
+%   min_{u,L} delta_{|| . || <= nu}(B * [I_1(u_1), .., I_k(u_k), R])
+%       + sum_i mu * TV(u_i)
+%
+%   MEAN-FREE & USES REFERENCE
+
 function [u, primal_history, dual_history] = ...
     simple_mf_nn_registration(img, refIdx, optPara)
+% IN:
+%   img     ~ cell(k+1, 1)      array of images
+%   refIdx  ~ 1 x 1             index of reference image inside of img
+%   optPara ~ struct            optimization parameters with fields
+%       .theta      ~ 1 x 1     over-relaxation parameter
+%       .maxIter    ~ 1 x 1     maximum number of iterations
+%       .tol        ~ 1 x 1     tolerance for p/d-gap + infeasibilities
+%       .outerIter  ~ 1 x 1     number of outer iterations
+%       .mu         ~ 1 x 1     weighting factor (see model above)
+%       .nu_factor  ~ 1 x 1     reduction of nu per outer iterate
+%       .bc         ~ string    boundary condition for grid discretization
+%       .doPlots    ~ logical   do plots during optimization?
+%
+% OUT:                                      PER OUTER ITERATE:
+%   u               ~ cell(outerIter, 1)        displacement fields
+%   L               ~ cell(outerIter, 1)        low rank components
+%   primal_history  ~ cell(outerIter, 1)        primal iteration history
+%   dual_history    ~ cell(outerIter, 1)        dual iteration history
 
 % make sure that interpolation routines are on search path
 if ~exist('evaluate_displacement.m', 'file')

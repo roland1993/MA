@@ -1,3 +1,8 @@
+%   test script for data terms
+%       (1)     || [I_1(u_1), I_2] ||_*
+%       (2)     || [I_1(u_1) - I_2] ||_*
+%       (3)     || B * [I_1(u_1), I_2] ||_*
+
 %% INITIALIZATION
 
 % clean-up

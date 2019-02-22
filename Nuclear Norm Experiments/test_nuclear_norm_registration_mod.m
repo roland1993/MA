@@ -1,3 +1,10 @@
+%   min_{u,L} delta_{|| . || <= nu}([l_1 - R, .., l_(k+1) - R])
+%               + sum_i || l_i - I_i(u_i) ||_1
+%               + || l_(k+1) - R ||_(k+1)
+%               + mu * sum_i TV(u_i)
+%
+%   SUBTRACTS REFERENCE & USES REFERENCE
+
 %% INITIALIZATION
 
 % clean-up

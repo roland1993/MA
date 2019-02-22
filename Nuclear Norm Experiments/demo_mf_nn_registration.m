@@ -1,3 +1,5 @@
+% demo script for mf_nn_registration.m
+
 clear all, close all, clc;
 
 % create data

@@ -1,3 +1,10 @@
+%   test script for data terms
+%       (1)     min_L mu * || L ||_* + || L - [I_1(u_1), I_2] ||_1
+%       (2)     min_L delta_{|| . || <= nu}(L)
+%                       + || L - [I_1(u_1), I_2] ||_1
+%       (3)     min_L delta_{|| . || <= nu}(B * L)
+%                       + || L - [I_1(u_1), I_2] ||_1
+
 %% INITIALIZATION
 
 % clean-up

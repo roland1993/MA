@@ -1,3 +1,8 @@
+%   min_u delta_{|| . || <= nu}(B * [I_1(u_1), .., I_k(u_k)])
+%           + mu * sum_i TV(u_i)
+%
+%   NO LOW-RANK & MEAN-FREE & NO REFERENCE
+
 %% INITIALIZATION
 
 % clean-up

@@ -1,3 +1,9 @@
+%   min_{u,L} delta_{|| . || <= nu}(B * L)
+%               + sum_i || l_i - I_i(u_i) ||_1
+%               + mu * sum_i TV(u_i)
+%
+%   MEAN-FREE & NO REFERENCE
+
 %% INITIALIZATION
 
 % clean-up
