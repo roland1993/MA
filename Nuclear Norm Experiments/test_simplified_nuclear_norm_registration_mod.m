@@ -67,7 +67,7 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 % ~~~~~~~~~ DYNAMIC TEST IMAGES ~~~~~~~~~
 m = 100;
 n = 100;
-k = 6;
+k = 8;
 data = dynamicTestImage(m, n, k);
 img = cell(1, k);
 for i = 1 : k, img{i} = data(:, :, i);  end
@@ -406,7 +406,10 @@ if nargout == 3
     end
     
     % apply || . ||_2^2 to x
-    [res1_F3, res2_F3, res3_F3] = norm2_squared(x, sigma, conjugate_flag);
+    % [~, ~, res3_F3] = norm2_squared(x, sigma, conjugate_flag);
+    
+    % apply delta_{0}(.) to x
+    [res1_F3, res2_F3, res3_F3] = zero_function(x, ~conjugate_flag);
     % update outputs
     res1 = res1 + res1_F3;
     res2 = max([res2, res2_F3]);
@@ -433,7 +436,10 @@ else
     end
     
     % apply || . ||_2^2 to x
-    [res1_F3, res2_F3] = norm2_squared(x, sigma, conjugate_flag);
+    % [res1_F3, res2_F3] = norm2_squared(x, sigma, conjugate_flag);
+    
+    % apply delta_{0}(.) to x
+    [res1_F3, res2_F3] = zero_function(x, ~conjugate_flag);
     % update outputs
     res1 = res1 + res1_F3;
     res2 = max([res2, res2_F3]);
