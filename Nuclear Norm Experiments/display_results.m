@@ -1,29 +1,12 @@
-function img_u = display_results(img, refIdx, u, L)
+function img_u = display_results(img, u, refIdx, L)
 
-% k = number of templates
-k = length(img) - 1;
-
-% get reference image
-R = img{refIdx};
-
-% some indexing
-tempIdx = 1 : (k + 1);
-tempIdx(refIdx) = [];
-IDX = [tempIdx, refIdx];
+%-----------------INITIALIZATION------------------------------------------%
 
 % get image resolution etc.
-[m, n] = size(R);
+[m, n] = size(img{1});
 h_img = [1, 1];
 omega = [0, m, 0, n];
 h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
-
-% evaluate displacements
-img_u = cell(k + 1, 1);
-for i = 1 : k
-    img_u{tempIdx(i)} = ...
-        evaluate_displacement(img{tempIdx(i)}, h_img, u(:, :, i));
-end
-img_u{refIdx} = img{refIdx};
 
 % get cc-grid for plotting
 [cc_x, cc_y] = cell_centered_grid(omega, [m, n]);
@@ -36,10 +19,56 @@ green = cat(3, zeros(m, n), ones(m, n), zeros(m, n));
 figure;
 colormap gray(256);
 
-if nargin == 4
+%-----------------EVALUATE DISPLACEMENTS----------------------------------%
+
+% set flag for models with/without reference
+reference = exist('refIdx', 'var') && ~isempty(refIdx);
+
+% set flag for models with/without low-rank-part
+lowrank = exist('L', 'var') && ~isempty(L);
+
+if reference
+    
+    % k = number of templates
+    k = length(img) - 1;
+    
+    % get reference image
+    R = img{refIdx};
+    
+    % some indexing
+    tempIdx = 1 : (k + 1);
+    tempIdx(refIdx) = [];
+    IDX = [tempIdx, refIdx];
+    
+    % evaluate displacements
+    img_u = cell(k + 1, 1);
+    for i = 1 : k
+        img_u{tempIdx(i)} = ...
+            evaluate_displacement(img{tempIdx(i)}, h_img, u(:, :, i));
+    end
+    img_u{refIdx} = img{refIdx};
+    
+else
+    
+    % k = number of templates
+    k = length(img);
+    
+    % evaluate displacements
+    img_u = cell(k, 1);
+    for i = 1 : k
+        img_u{i} = ...
+            evaluate_displacement(img{i}, h_img, u(:, :, i));
+    end
+    
+end
+
+%-----------------PLOTTING------------------------------------------------%
+
+% case 1: with reference & low-rank-part
+if reference && lowrank
     
     % get mean of L
-    meanL = sum(L, 3) / (k + 1);
+    meanL = mean(L, 3);
     
     for i = 1 : (k + 1)
         
@@ -77,7 +106,10 @@ if nargin == 4
         
     end
     
-else
+end
+    
+% case 2: with reference & without low-rank-part
+if reference && ~lowrank
     
     for i = 1 : (k + 1)
         
@@ -106,6 +138,77 @@ else
             title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - R|', ...
                 i, i, i, i));
         end
+        
+    end
+    
+end
+
+% case 3: without reference & with low-rank-part
+if ~reference && lowrank
+    
+    % get mean of L
+    meanL = mean(L, 3);
+    
+    for i = 1 : k
+        
+        subplot(3, k, i);
+        imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
+        hold on;
+        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+            u(:, 2, i), u(:, 1, i), 0, 'r');
+        hold off;
+        title(sprintf('T_%d with u_%d', i, i));
+        
+        subplot(3, k, k + i);
+        imshow(img_u{i}, [0 1], 'InitialMagnification', 'fit');
+        hold on;
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', green, ...
+            'AlphaData', abs(img_u{i} - L(:, :, i)));
+        hold off;
+        title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - l_%d|', ...
+            i, i, i, i, i));
+        
+        subplot(3, k, 2 * k + i);
+        imshow(L(:, :, i) - meanL, [-1 1], 'InitialMagnification', 'fit');
+        title(sprintf('l_%d - l_{mean}', i));
+        
+    end
+    
+end
+
+% case 4: without reference & without low-rank-part
+if ~reference && ~lowrank
+    
+    % get mean image for plotting difference
+    meanImg = zeros(size(img_u{1}));
+    for i = 1 : k
+        meanImg = meanImg + img_u{i} / k;
+    end
+    
+    for i = 1 : k
+        
+        subplot(2, k, i);
+        imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
+        hold on;
+        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
+            u(:, 2, i), u(:, 1, i), 0, 'r');
+        hold off;
+        title(sprintf('T_%d with u_%d', i, i));
+        
+        subplot(2, k, k + i);
+        imshow(img_u{i}, [0 1], 'InitialMagnification', 'fit');
+        hold on;
+        imagesc(...
+            'YData', omega(1) + h_grid(1) * [0.5, m - 0.5], ...
+            'XData', omega(3) + h_grid(2) * [0.5, n - 0.5], ...
+            'CData', green, ...
+            'AlphaData', abs(img_u{i} - meanImg));
+        hold off;
+        title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - T_{mean}|', ...
+            i, i, i, i));
         
     end
     

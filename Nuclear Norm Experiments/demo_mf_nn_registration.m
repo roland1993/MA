@@ -3,7 +3,7 @@
 clear all, close all, clc;
 
 % create data
-m = 100;    n = 100;    k = 6;
+m = 100;    n = 100;    k = 8;
 data = dynamicTestImage(m, n, k + 1);
 img = cell(k + 1, 1);
 for i = 1 : (k + 1), img{i} = data(:, :, i); end
@@ -17,8 +17,8 @@ optPara.theta = 1;
 optPara.maxIter = 2000;
 optPara.tol = 1e-3;
 optPara.outerIter = 20;
-optPara.mu = 5e-1;
-optPara.nu_factor = 0.85;
+optPara.mu = 1e-1;
+optPara.nu_factor = 0.9;
 optPara.bc = 'linear';
 optPara.doPlots = true;
 
@@ -28,7 +28,7 @@ tic;
 toc;
 
 % display results
-img_u = display_results(img, refIdx, u{end}, L{end});
+img_u = display_results(img, u{end}, refIdx, L{end});
 plot_sv(L);
 
 % 

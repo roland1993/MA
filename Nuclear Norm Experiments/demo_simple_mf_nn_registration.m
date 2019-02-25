@@ -3,7 +3,7 @@
 clear all, close all, clc;
 
 % create data
-m = 100;    n = 100;    k = 6;
+m = 100;    n = 100;    k = 8;
 data = dynamicTestImage(m, n, k + 1);
 img = cell(k + 1, 1);
 for i = 1 : (k + 1), img{i} = data(:, :, i); end
@@ -31,7 +31,7 @@ u = simple_mf_nn_registration(img, refIdx, optPara);
 toc;
 
 % display results
-display_results(img, refIdx, u{end});
+display_results(img, u{end}, refIdx);
 
 % evaluate displacments and plot singular values
 I = cell(optPara.outerIter, 1);
