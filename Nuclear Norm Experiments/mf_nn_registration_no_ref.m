@@ -1,13 +1,14 @@
-%   min_{u,L} delta_{|| . || <= nu}(B * [I_1(u_1), .., I_k(u_k), R])
-%       + sum_i mu * TV(u_i) + delta_{mean(u_x) = 0, mean(u_y) = 0}(u)
+%   min_{u,L} delta_{|| . || <= nu}(B * L)
+%       + sum_i || l_i - I_(u_i) ||_1
+%       + sum_i mu * TV(u_i)
+%       + delta_{mean(u_x) = 0, mean(u_y) = 0}
 %
-%   MEAN-FREE & NO REFERENCE & UNIQUENESS-TERM
+%   MEAN-FREE & NO REFERENCE & USES UNIQUENESS-TERM
 
-function [u, primal_history, dual_history] = ...
-    simple_mf_nn_registration_no_ref(img, optPara)
+function [u, L, primal_history, dual_history] = ...
+    mf_nn_registration_no_ref(img, optPara)
 % IN:
 %   img     ~ cell(k, 1)      array of images
-%   refIdx  ~ 1 x 1             index of reference image inside of img
 %   optPara ~ struct            optimization parameters with fields
 %       .theta      ~ 1 x 1     over-relaxation parameter
 %       .maxIter    ~ 1 x 1     maximum number of iterations
@@ -33,7 +34,7 @@ end
 vec = @(x) x(:);
 normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 
-% get number of temples images and corresponding indices
+% get number of template images
 k = length(img);
 
 % normalize images to range [0, 1]
@@ -57,21 +58,31 @@ doPlots = optPara.doPlots;
 
 % initialize outputs
 u = cell(outerIter, 1);
+L = cell(outerIter, 1);
 primal_history = cell(outerIter, 1);
 dual_history = cell(outerIter, 1);
 
 % initialize primal and dual variables
-x = zeros(2 * k * m * n, 1);
-p = zeros(5 * k * m * n, 1);
-
-% get mean free operator
-M = mean_free_operator(m, n, k);
+x = zeros(3 * k * m * n, 1);
+p = zeros(6 * k * m * n, 1);
 
 % gradient operator for displacement fields
 A2 = finite_difference_operator(m, n, h_grid, k, bc);
 
+% all zeros
+A3 = sparse(k * m * n, 2 * k * m * n);
+
+% identity matrix
+A4 = speye(k * m * n);
+
+% all zeros
+A5 = sparse(4 * k * m * n, k * m * n);
+
+% mean free operator
+A6 = mean_free_operator(m, n, k);
+
 % set function handle to G-part of target function
-G_handle = @(x, c_flag) mean_zero_indicator(x, [m, n, k], c_flag);
+G_handle = @(x, c_flag) G(x, c_flag);
 
 % if plotting was requested -> create figure (handle)
 if doPlots, fh = figure; end
@@ -81,12 +92,12 @@ for o = 1 : outerIter
     
     % use computed u as u0 for new iterate
     if o == 1
-        u0 = reshape(x, m * n, 2, k);
+        u0 = zeros(m * n, 2, k);
     else
         u0 = u{o - 1};
     end
     
-    % constant offset vector for nuclear norm
+    % reference vector for computing SAD from L
     b = zeros(k * m * n, 1);
     
     % templates evaluated using current u0
@@ -99,12 +110,25 @@ for o = 1 : outerIter
             vec(T_u(:, :, i)) - dT{i} * vec(u0(:, :, i));
     end
     
-    % upper block of A ~> template image gradients
-    A1 = M * blkdiag(dT{:});
+    % get low-rank image-matrix
+    if o == 1
+        L_star = vec(T_u); 
+    else
+        L_star = vec(L{o - 1});
+    end
+    
+    % estimate new threshold nu from nn of low-rank mean-free image-matrix
+    D = reshape(A6 * L_star, m * n, k);
+    [~, S, ~] = svd(D, 'econ');
+    nu = nu_factor * sum(diag(S));
+    
+    % upper left block of A ~> template image gradients
+    A1 = -blkdiag(dT{:});
     
     % build up A from the computed blocks
-    A = [   	A1
-                A2      ];
+    A = [       A1,     A4
+                A2,     A5          
+                A3,     A6          ];
     
     % estimate spectral norm of A
     norm_A_est = normest(A);
@@ -113,62 +137,61 @@ for o = 1 : outerIter
     tau = sqrt(0.975 / norm_A_est ^ 2);
     sigma = sqrt(0.975 / norm_A_est ^ 2);
     
-    % estimate nu-parameter
-    I = reshape(M * vec(T_u), m * n, k);
-    [~, SV, ~] = svd(I, 'econ');
-    nu = nu_factor * sum(diag(SV));
-    
     % get function handle to F-part of target function
-    b = M * (-b);
-    F_handle = @(y, c_flag) F(y, b, k, nu, mu, sigma, c_flag);
+    F_handle = @(y, c_flag) F(y, b, k, mu, nu, sigma, c_flag);
     
     % perform optimization
     [x, p, primal_history{o}, dual_history{o}] = chambolle_pock( ...
         F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
     
-    % get displacements u from (primal) minimizer x
-    u{o} = reshape(x, m * n, 2, k);
+    % get displacements and low rank components from (primal) minimizer x
+    u{o} = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
+    L{o} = reshape(x(2 * k * m * n + 1 : end), m, n, k);
     
     % plot progress
     if doPlots, plot_progress; end
-    
+
 end
 %-------------------------------------------------------------------------%
 
 %-------LOCAL FUNCTION DEFINITIONS----------------------------------------%
     function [res1, res2, res3] = ...
-            F(y, d, k, nu, mu, sigma, conjugate_flag)
-        % splits input y = [v; w; x] and computes
-        %   F_1(v) = delta_{|| . ||_* <= nu}(v - d)
-        %   F_2(w) = sum_i mu * || w_i ||_{2,1}
+            F(y, b, k, mu, nu, sigma, conjugate_flag)
+        % splits input y = [y1; y2; y3] and computes
+        %   F_1(y1) = || y1 - b ||_1
+        %   F_2(y2) = sum_i mu * || y2_i ||_{2,1}
+        %   F_3(y3) = delta_{|| . ||_* <= nu}(y3)
         
-        % get number of pixels per image
-        mn = numel(y) / (5 * k);
-            
-        % split input y into v- and w-part
-        v = y(1 : k * mn);
-        w = y(k * mn + 1 : 5 * k * mn);
+        % get number of template images and number of pixels per image
+        mn = numel(y) / (6 * k);
         
-        % for the sake of efficiency: compute prox only if requested!
+        % split input y into r- and v-part
+        y1 = y(1 : k * mn);
+        y2 = y(k * mn + 1 : 5 * k * mn);
+        y3 = y((5 * k * mn) + 1 : end);
+        
         if nargout == 3
             
-            % apply nuclear norm to v-part
-            [~, ~, res3_F1] = nuclear_norm_constraint_mod( ...
-                v, d, k, sigma, nu, conjugate_flag);
+            % initialize output
+            res3 = zeros(6 * k * mn, 1);
             
-            % initialize outputs with values from F1
-            res3 = zeros(5 * k * mn, 1);
+            % apply SAD to y1-part
+            [~, ~, res3_F1] = SAD(y1, b, sigma, conjugate_flag);
             res3(1 : k * mn) = res3_F1;
             
-            % apply mu * ||.||_{2,1} to each of the k components v_i of v
-            w = reshape(w, 4 * mn, k);
+            % apply mu * ||.||_{2,1} to each of the k components y2_i
+            y2 = reshape(y2, 4 * mn, k);
             for j = 1 : k
                 [~, ~, res3_F2] = ...
-                    norm21(w(:, j), mu, sigma, conjugate_flag);
-                % update outputs
+                    norm21(y2(:, j), mu, sigma, conjugate_flag);
                 res3(k * mn + (j - 1) * 4 * mn + 1 : ...
-                    k * mn + j * 4 * mn) = res3_F2;
+                        k * mn + j * 4 * mn) = res3_F2;
             end
+            
+            % apply delta_{|| . ||_* <= nu} to y3
+            [~, ~, res3_F3] = nuclear_norm_constraint( ...
+                y3, k, sigma, nu, conjugate_flag);
+            res3(5 * k * mn + 1 : end) = res3_F3;
             
             % dummy outputs
             res1 = [];
@@ -176,25 +199,50 @@ end
             
         else
             
-            % apply nuclear norm to v-part
-            [res1_F1, res2_F1] = nuclear_norm_constraint_mod( ...
-                v, d, k, sigma, nu, conjugate_flag);
+            % apply F1 = SAD to y1-part
+            [res1_F1, res2_F1] = SAD(y1, b, sigma, conjugate_flag);
             
-            % initialize outputs with values from F1
-            res1 = res1_F1;
-            res2 = res2_F1;
-            
-            % apply mu * ||.||_{2,1} to each of the k components v_i of v
-            w = reshape(w, 4 * mn, k);
+            % apply mu * ||.||_{2,1} to each of the k components y2_i
+            y2 = reshape(y2, 4 * mn, k);
+            res1_F2 = 0;
+            res2_F2 = 0;
             for j = 1 : k
-                [res1_F2, res2_F2] = ...
-                    norm21(w(:, j), mu, sigma, conjugate_flag);
-                % update outputs
-                res1 = res1 + res1_F2;
-                res2 = max(res2, res2_F2);
+                [res1_F2_i, res2_F2_i] = ...
+                    norm21(y2(:, j), mu, sigma, conjugate_flag);
+                res1_F2 = res1_F2 + res1_F2_i;
+                res2_F2 = max(res2_F2, res2_F2_i);
             end
             
+            % apply delta_{|| . ||_* <= nu} to y3
+            [res1_F3, res2_F3] = nuclear_norm_constraint( ...
+                y3, k, sigma, nu, conjugate_flag);
+            
+            % compute outputs
+            res1 = [res1_F1, res1_F2, res1_F3];
+            res2 = max([res2_F1, res2_F2, res2_F3]);
+            
         end
+        
+    end
+%-------------------------------------------------------------------------%
+    function [res1, res2, res3] = G(x, conjugate_flag)
+        
+        % split x = [x_u, x_l]
+        x_u = x(1 : 2 * k * m * n);
+        x_l = x(2 * k * m * n + 1 : end);
+        
+        % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
+        [res1_G1, res2_G1, res3_G1] = ...
+            mean_zero_indicator(x_u, [m, n, k], conjugate_flag);
+        
+        % apply zero-function to x_l
+        [res1_G2, res2_G2, res3_G2] = zero_function(x_l, conjugate_flag);
+        
+        
+        % combine outputs
+        res1 = res1_G1 + res1_G2;
+        res2 = max([res2_G1, res2_G2]);
+        res3 = [res3_G1; res3_G2];
         
     end
 %-------------------------------------------------------------------------%
@@ -205,9 +253,9 @@ end
         figure(fh);
         set(fh, 'NumberTitle', 'off', ...
             'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
-        
+
         % plot primal vs. dual energy
-        subplot(1, 3, 1);
+        subplot(2, 2, 1);
         plot(primal_history{o}(:, 1));
         hold on;
         plot(dual_history{o}(:, 1));
@@ -223,7 +271,7 @@ end
         % plot numerical gap
         GAP = abs((primal_history{o}(:, 1) - dual_history{o}(:, 1)) ./ ...
             dual_history{o}(:, 1));
-        subplot(1, 3, 2);
+        subplot(2, 2, 2);
         semilogy(GAP);
         axis tight;
         grid on;
@@ -234,12 +282,12 @@ end
         title('primal-dual gap');
         
         % plot constraints
-        subplot(1, 3, 3);
-        semilogy(primal_history{o}(:, 4));
+        subplot(2, 2, 3);
+        semilogy(primal_history{o}(:, 6));
         hold on;
-        semilogy(primal_history{o}(:, 5));
-        semilogy(dual_history{o}(:, 4));
-        semilogy(dual_history{o}(:, 5));
+        semilogy(primal_history{o}(:, 7));
+        semilogy(dual_history{o}(:, 6));
+        semilogy(dual_history{o}(:, 7));
         hold off;
         axis tight;
         grid on;
@@ -247,6 +295,22 @@ end
         legend({'F', 'G', 'F*', 'G*'}, ...
             'Location', 'SouthOutside', 'Orientation', 'Horizontal');
         title('constraints');
+        
+        % plot different components of F
+        subplot(2, 2, 4);
+        plot(primal_history{o}(:, 1));
+        hold on;
+        plot(primal_history{o}(:, 2));
+        plot(primal_history{o}(:, 3));
+        hold off;
+        axis tight;
+        ylim([0, max(primal_history{o}(:, 1))]);
+        grid on;
+        xlabel('#iter');
+        legend({'F', '\Sigma_i || T_i(u_i) - l_i ||_1', ...
+            '\Sigma_i TV(u_i)'}, 'Location', 'SouthOutside', ...
+            'Orientation', 'Horizontal');
+        title('decomposition of F');
         
         drawnow;
         
