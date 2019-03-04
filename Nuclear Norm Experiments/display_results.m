@@ -1,4 +1,4 @@
-function img_u = display_results(img, u, refIdx, L)
+function img_u = display_results(img, u, refIdx, L, fh)
 
 %-----------------INITIALIZATION------------------------------------------%
 
@@ -16,8 +16,13 @@ cc_grid = [cc_x(:), cc_y(:)];
 green = cat(3, zeros(m, n), ones(m, n), zeros(m, n));
 
 % do the plotting
-figure;
-colormap gray(256);
+if exist('fh', 'var') && ~isempty(fh)
+    figure(fh);
+    colormap gray(256);
+else
+    figure;
+    colormap gray(256);
+end
 
 %-----------------EVALUATE DISPLACEMENTS----------------------------------%
 
@@ -79,7 +84,7 @@ if reference && lowrank
             quiver(cc_grid(:, 2), cc_grid(:, 1), ...
                 u(:, 2, i), u(:, 1, i), 0, 'r');
             hold off;
-            title(sprintf('T_%d with u_%d', i, i));
+            title(sprintf('T_{%d} with u_{%d}', i, i));
         else
             title('R');
         end
@@ -94,15 +99,16 @@ if reference && lowrank
             'AlphaData', abs(img_u{IDX(i)} - L(:, :, i)));
         hold off;
         if i <= k
-            title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - l_%d|', ...
+            title(sprintf( ...
+                'T_{%d}(u_{%d}) with |T_{%d}(u_{%d}) - l_{%d}|', ...
                 i, i, i, i, i));
         else
-            title(sprintf('R with |R - l_%d|', i));
+            title(sprintf('R with |R - l_{%d}|', i));
         end
         
         subplot(3, k + 1, 2 * (k + 1) + i);
-        imshow(L(:, :, i) - meanL, [-1 1], 'InitialMagnification', 'fit');
-        title(sprintf('l_%d - l_{mean}', i));
+        imshow(L(:, :, i) - meanL, [], 'InitialMagnification', 'fit');
+        title(sprintf('l_{%d} - l_{mean}', i));
         
     end
     
@@ -120,7 +126,7 @@ if reference && ~lowrank
             quiver(cc_grid(:, 2), cc_grid(:, 1), ...
                 u(:, 2, i), u(:, 1, i), 0, 'r');
             hold off;
-            title(sprintf('T_%d with u_%d', i, i));
+            title(sprintf('T_{%d} with u_{%d}', i, i));
         else
             title('R');
         end
@@ -135,7 +141,7 @@ if reference && ~lowrank
                 'CData', green, ...
                 'AlphaData', abs(img_u{IDX(i)} - R));
             hold off;
-            title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - R|', ...
+            title(sprintf('T_{%d}(u_{%d}) with |T_{%d}(u_{%d}) - R|', ...
                 i, i, i, i));
         end
         
@@ -157,7 +163,7 @@ if ~reference && lowrank
         quiver(cc_grid(:, 2), cc_grid(:, 1), ...
             u(:, 2, i), u(:, 1, i), 0, 'r');
         hold off;
-        title(sprintf('T_%d with u_%d', i, i));
+        title(sprintf('T_{%d} with u_{%d}', i, i));
         
         subplot(3, k, k + i);
         imshow(img_u{i}, [0 1], 'InitialMagnification', 'fit');
@@ -168,12 +174,12 @@ if ~reference && lowrank
             'CData', green, ...
             'AlphaData', abs(img_u{i} - L(:, :, i)));
         hold off;
-        title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - l_%d|', ...
+        title(sprintf('T_{%d}(u_{%d}) with |T_{%d}(u_{%d}) - l_{%d}|', ...
             i, i, i, i, i));
         
         subplot(3, k, 2 * k + i);
-        imshow(L(:, :, i) - meanL, [-1 1], 'InitialMagnification', 'fit');
-        title(sprintf('l_%d - l_{mean}', i));
+        imshow(L(:, :, i) - meanL, [], 'InitialMagnification', 'fit');
+        title(sprintf('l_{%d} - l_{mean}', i));
         
     end
     
@@ -196,7 +202,7 @@ if ~reference && ~lowrank
         quiver(cc_grid(:, 2), cc_grid(:, 1), ...
             u(:, 2, i), u(:, 1, i), 0, 'r');
         hold off;
-        title(sprintf('T_%d with u_%d', i, i));
+        title(sprintf('T_{%d} with u_{%d}', i, i));
         
         subplot(2, k, k + i);
         imshow(img_u{i}, [0 1], 'InitialMagnification', 'fit');
@@ -207,7 +213,8 @@ if ~reference && ~lowrank
             'CData', green, ...
             'AlphaData', abs(img_u{i} - meanImg));
         hold off;
-        title(sprintf('T_%d(u_%d) with |T_%d(u_%d) - T_{mean}|', ...
+        title(sprintf( ...
+            'T_{%d}(u_{%d}) with |T_{%d}(u_{%d}) - T_{mean}|', ...
             i, i, i, i));
         
     end

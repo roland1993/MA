@@ -4,7 +4,7 @@ function plot_sv(I)
 numImg = size(I{1}, 3);
 
 % get number of outer iterations
-outerIter = length(I);
+outerIter = sum(cellfun(@(c) ~isempty(c), I));
 
 % get numImg colors
 cmap = jet(numImg);
