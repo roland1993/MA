@@ -6,7 +6,7 @@
 function [u, primal_history, dual_history] = ...
     simple_mf_nn_registration_no_ref(img, optPara)
 % IN:
-%   img     ~ cell(k, 1)      array of images
+%   img     ~ cell(k, 1)        array of images
 %   refIdx  ~ 1 x 1             index of reference image inside of img
 %   optPara ~ struct            optimization parameters with fields
 %       .theta      ~ 1 x 1     over-relaxation parameter
@@ -107,11 +107,12 @@ for o = 1 : outerIter
                 A2      ];
     
     % estimate spectral norm of A
-    norm_A_est = normest(A);
+    e = matrix_norm(A);
+    norm_A_est = e(end);
     
     % use estimated norm to get primal and dual step sizes
-    tau = sqrt(0.975 / norm_A_est ^ 2);
-    sigma = sqrt(0.975 / norm_A_est ^ 2);
+    tau = sqrt(0.99 / norm_A_est ^ 2);
+    sigma = sqrt(0.99 / norm_A_est ^ 2);
     
     % estimate nu-parameter
     I = reshape(M * vec(T_u), m * n, k);

@@ -5,10 +5,10 @@
 %
 %   MEAN-FREE & NO REFERENCE & USES UNIQUENESS-TERM
 
-function [u, L, primal_history, dual_history] = ...
+function [u, L, SV_history] = ...
     mf_nn_registration_no_ref(img, optPara)
 % IN:
-%   img     ~ cell(k, 1)      array of images
+%   img     ~ cell(k, 1)        array of images
 %   optPara ~ struct            optimization parameters with fields
 %       .theta      ~ 1 x 1     over-relaxation parameter
 %       .maxIter    ~ 1 x 1     maximum number of iterations
@@ -59,8 +59,6 @@ doPlots = optPara.doPlots;
 % initialize outputs
 u = cell(outerIter, 1);
 L = cell(outerIter, 1);
-primal_history = cell(outerIter, 1);
-dual_history = cell(outerIter, 1);
 
 % initialize primal and dual variables
 x = zeros(3 * k * m * n, 1);
@@ -82,10 +80,17 @@ A5 = sparse(4 * k * m * n, k * m * n);
 A6 = mean_free_operator(m, n, k);
 
 % set function handle to G-part of target function
-G_handle = @(x, c_flag) G(x, c_flag);
+G_handle = @(x, c_flag) G(x, [m, n, k], c_flag);
 
 % if plotting was requested -> create figure (handle)
-if doPlots, fh = figure; end
+if doPlots
+    fh1 = figure;
+    fh2 = figure;
+    fh3 = figure;
+end
+
+% initialize storage for singular values
+SV_history = zeros(k, outerIter);
 
 %--------------OUTER ITERATION--------------------------------------------%
 for o = 1 : outerIter
@@ -131,25 +136,37 @@ for o = 1 : outerIter
                 A3,     A6          ];
     
     % estimate spectral norm of A
-    norm_A_est = normest(A);
+    e = matrix_norm(A);
+    norm_A_est = e(end);
     
     % use estimated norm to get primal and dual step sizes
-    tau = sqrt(0.975 / norm_A_est ^ 2);
-    sigma = sqrt(0.975 / norm_A_est ^ 2);
+    tau = sqrt(0.99 / norm_A_est ^ 2);
+    sigma = sqrt(0.99 / norm_A_est ^ 2);
     
     % get function handle to F-part of target function
     F_handle = @(y, c_flag) F(y, b, k, mu, nu, sigma, c_flag);
     
     % perform optimization
-    [x, p, primal_history{o}, dual_history{o}] = chambolle_pock( ...
+    [x, p, primal_history, dual_history] = chambolle_pock( ...
         F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
     
     % get displacements and low rank components from (primal) minimizer x
     u{o} = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
     L{o} = reshape(x(2 * k * m * n + 1 : end), m, n, k);
     
+    % store info on development of singular values
+    [~, S, ~] = svd(reshape(A6 * vec(L{o}), m * n, k), 'econ');
+    SV_history(:, o) = diag(S);
+    
     % plot progress
-    if doPlots, plot_progress; end
+    if doPlots
+        plot_progress(fh1, primal_history, dual_history);
+        set(fh1, 'NumberTitle', 'off', ...
+            'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
+        display_results(img, u{o}, [], L{o}, fh2);
+        plot_sv(fh3, SV_history(:, 1 : o));
+        drawnow;
+    end
 
 end
 %-------------------------------------------------------------------------%
@@ -225,15 +242,15 @@ end
         
     end
 %-------------------------------------------------------------------------%
-    function [res1, res2, res3] = G(x, conjugate_flag)
+    function [res1, res2, res3] = G(x, s, conjugate_flag)
         
         % split x = [x_u, x_l]
-        x_u = x(1 : 2 * k * m * n);
-        x_l = x(2 * k * m * n + 1 : end);
+        x_u = x(1 : 2 * prod(s));
+        x_l = x(2 * prod(s) + 1 : end);
         
         % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
         [res1_G1, res2_G1, res3_G1] = ...
-            mean_zero_indicator(x_u, [m, n, k], conjugate_flag);
+            mean_zero_indicator(x_u, s, conjugate_flag);
         
         % apply zero-function to x_l
         [res1_G2, res2_G2, res3_G2] = zero_function(x_l, conjugate_flag);
@@ -246,19 +263,17 @@ end
         
     end
 %-------------------------------------------------------------------------%
-    function plot_progress
+    function plot_progress(fh, primal_history, dual_history)
         % plots progress of one outer iterate
         
         % make figure active
         figure(fh);
-        set(fh, 'NumberTitle', 'off', ...
-            'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
 
         % plot primal vs. dual energy
         subplot(2, 2, 1);
-        plot(primal_history{o}(:, 1));
+        plot(primal_history(:, 1));
         hold on;
-        plot(dual_history{o}(:, 1));
+        plot(dual_history(:, 1));
         hold off;
         axis tight;
         grid on;
@@ -269,8 +284,8 @@ end
         title('primal vs. dual')
         
         % plot numerical gap
-        GAP = abs((primal_history{o}(:, 1) - dual_history{o}(:, 1)) ./ ...
-            dual_history{o}(:, 1));
+        GAP = abs((primal_history(:, 1) - dual_history(:, 1)) ./ ...
+            dual_history(:, 1));
         subplot(2, 2, 2);
         semilogy(GAP);
         axis tight;
@@ -283,11 +298,11 @@ end
         
         % plot constraints
         subplot(2, 2, 3);
-        semilogy(primal_history{o}(:, 6));
+        semilogy(primal_history(:, 6));
         hold on;
-        semilogy(primal_history{o}(:, 7));
-        semilogy(dual_history{o}(:, 6));
-        semilogy(dual_history{o}(:, 7));
+        semilogy(primal_history(:, 7));
+        semilogy(dual_history(:, 6));
+        semilogy(dual_history(:, 7));
         hold off;
         axis tight;
         grid on;
@@ -298,13 +313,13 @@ end
         
         % plot different components of F
         subplot(2, 2, 4);
-        plot(primal_history{o}(:, 1));
+        plot(primal_history(:, 1));
         hold on;
-        plot(primal_history{o}(:, 2));
-        plot(primal_history{o}(:, 3));
+        plot(primal_history(:, 2));
+        plot(primal_history(:, 3));
         hold off;
         axis tight;
-        ylim([0, max(primal_history{o}(:, 1))]);
+        ylim([0, max(primal_history(:, 1))]);
         grid on;
         xlabel('#iter');
         legend({'F', '\Sigma_i || T_i(u_i) - l_i ||_1', ...
@@ -312,7 +327,35 @@ end
             'Orientation', 'Horizontal');
         title('decomposition of F');
         
-        drawnow;
+    end
+%-------------------------------------------------------------------------%
+    function plot_sv(fh, SV_history)
+        
+        % get number of images = number of sigular values
+        numImg = size(SV_history, 1);
+        
+        % get numImg colors
+        cmap = jet(numImg);
+        
+        % cell-array for legend entries
+        names = cell(numImg + 1, 1);
+        
+        % do the plotting
+        figure(fh);
+        clf;
+        hold on;
+        for j = 1 : numImg
+            plot(SV_history(j, :), '-x', 'Color', cmap(j, :));
+            names{j} = ['\sigma_', num2str(j)];
+        end
+        plot(sum(SV_history, 1), 'k--x');
+        names{numImg + 1} = '\Sigma_i \sigma_i';
+        hold off;
+        xlim([0.5, size(SV_history, 2) + 0.5]);
+        xlabel('#outer iter');
+        title('development of singular values');
+        grid on;
+        legend(names);
         
     end
 %-------------------------------------------------------------------------%
