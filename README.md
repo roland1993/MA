@@ -31,3 +31,7 @@ Convex optimization experiments with first-order primal-dual algorithm by [**Cha
 + A new distance measure for **simultaneous image registration** of an arbitrary number of template images (omitting a predefined reference). The rough idea is to **constrain the rank of the matrix of column-major images**, thus enforcing similarity between the images. Based on (and modified from) [Shape from Light Field Meets Robust PCA](https://link.springer.com/chapter/10.1007/978-3-319-10599-4_48). 
 
 + **Optimization** is performed in a similiar fashion as the TV-L1 and TV-L2 registration from above, i.e. using **convex image model approximations** and applying the **primal-dual algorithm** by **Chambolle & Pock**.
+
+---
+
+`This project and all code included with it is licensed under the MIT Open Source Lincense (see LICENSE.txt for details). If you have questions, contact me at roland.haase [at] student.uni-luebeck [dot] de.`
