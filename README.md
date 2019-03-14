@@ -34,6 +34,4 @@ Convex optimization experiments with first-order primal-dual algorithm by [**Cha
 
 ---
 
-`This project and all code included with it is licensed under the MIT Open Source Lincense (see LICENSE file for details).`
-
-`If you have questions, contact me at roland.haase [at] student.uni-luebeck [dot] de.`
+`This project and all code included with it is licensed under the MIT Open Source Lincense (see LICENSE file for details). If you have questions, contact me at roland.haase [at] student.uni-luebeck [dot] de.`
