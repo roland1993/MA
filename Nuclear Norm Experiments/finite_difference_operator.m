@@ -1,4 +1,14 @@
 function D = finite_difference_operator(m, n, h_grid, k, bc)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   m       ~ 1 x 1                         number of rows
 %   n       ~ 1 x 1                         number of columns
@@ -9,6 +19,7 @@ function D = finite_difference_operator(m, n, h_grid, k, bc)
 %   D       ~ sparse(4*k*m*n x 2*k*m*n)     finite difference operator for
 %                                               k displacement fields in 
 %                                               x- and y-direction
+%--------------------------------------------------------------------------
 
 % some standard parameters
 if nargin < 5, bc = 'linear'; end

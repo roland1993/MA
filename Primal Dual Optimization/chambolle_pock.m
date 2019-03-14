@@ -1,6 +1,15 @@
 function [x_star, y_star, primal_history, dual_history] = ...
     chambolle_pock(F, G, K, x0, y0, theta, tau, sigma, maxIter, tol)
-%
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % Solve the primal minimization problem
 %       min_x p(x) = F(Kx) + G(x)
 % by primal-dual reformulation into a saddle-point problem
@@ -39,6 +48,7 @@ function [x_star, y_star, primal_history, dual_history] = ...
 %   dual_history    ~ #iter x 5     history over all iterates of
 %                                       q(y_i), F*(y_i), G*(-K'*y_i),
 %                                       F*-constraints and G*-constraints
+%--------------------------------------------------------------------------
 
 % set standard parameters
 if nargin < 10, tol = 1e-3; end

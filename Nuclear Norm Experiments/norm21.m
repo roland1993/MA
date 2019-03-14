@@ -1,4 +1,14 @@
 function [res1, res2, res3] = norm21(v, mu, sigma, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       v               ~ m*n*4 x 1     input vector
 %       mu              ~ 1 x 1         weighting parameter
@@ -13,6 +23,7 @@ function [res1, res2, res3] = norm21(v, mu, sigma, conjugate_flag)
 %       res1            ~ 1 x 1         mu * ||v||_{2,1}
 %       res2            ~ 1 x 1         constraint violation measure
 %       res3            ~ m*n*4 x 1     prox_[mu * ||.||_{2,1}](v)
+%--------------------------------------------------------------------------
 
 % by default: evaluate ||v||_{2,1} instead of its conjugate
 if nargin < 4, conjugate_flag = false; end

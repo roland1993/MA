@@ -1,4 +1,14 @@
 function [f, df, d2f] = diffusive_energy(u, s, h)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   u   ~ (m*n) x 2             displacement field to regularize
 %   s   ~ 2 x 1                 s = [m, n]
@@ -7,6 +17,7 @@ function [f, df, d2f] = diffusive_energy(u, s, h)
 %   f   ~ 1 x 1                 diffusive energy of u
 %   df  ~ (m*n*2) x 1           gradient of diffusive energy w.r.t. u
 %   d2f ~ (m*n*2) x (m*n*2)     Hessian of diffusive energy w.r.t u
+%--------------------------------------------------------------------------
 
 % make sure u has the right format...
 u = reshape(u, [], 2);

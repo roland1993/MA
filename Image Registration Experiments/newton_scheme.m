@@ -1,5 +1,15 @@
 function [x_star, x_history] = ...
     newton_scheme(f, x0, tol1, maxIter, tol2)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   f           ~ function handle   target function, returns
 %                                       - f(x)      ~ 1 x 1
@@ -12,6 +22,7 @@ function [x_star, x_history] = ...
 % OUT:
 %   x_star      ~ k x 1             minimizer of f / last iterate
 %   x_history   ~ k x #iter         recording of all iterates of x
+%--------------------------------------------------------------------------
 
 % set standard parameters if not provided
 if nargin < 5, tol2 = 1e-2; end

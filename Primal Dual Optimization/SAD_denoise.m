@@ -1,5 +1,15 @@
 function [res1, res2, res3] = ...
     SAD_denoise(u, g, lambda, tau, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       u               ~ m*n x 1       template image (for denoising)
 %       g               ~ m*n x 1       reference image (noisy)
@@ -15,6 +25,7 @@ function [res1, res2, res3] = ...
 %       res1            ~ 1 x 1         convex conjugate SAD*(u)
 %       res2            ~ 1 x 1         constraint violation measure
 %       res3            ~ m*n x 1       prox-step of SAD* for u
+%--------------------------------------------------------------------------
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 5, conjugate_flag = false; end

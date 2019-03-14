@@ -1,4 +1,14 @@
 function [res1, res2, res3] = TV_registration(v, sigma, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       v               ~ m*n*4 x 1         gradient image to regularize
 %       sigma           ~ 1 x 1             step length for prox operator
@@ -12,6 +22,7 @@ function [res1, res2, res3] = TV_registration(v, sigma, conjugate_flag)
 %       res1            ~ 1 x 1             function value TV(v)
 %       res2            ~ 1 x 1             constraint violation measure
 %       res3            ~ m*n*2 x 1         prox-step of TV for v
+%--------------------------------------------------------------------------
 
 % by default: evaluate TV instead of its conjugate
 if nargin < 3, conjugate_flag = false; end

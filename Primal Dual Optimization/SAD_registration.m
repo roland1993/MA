@@ -1,5 +1,15 @@
 function [res1, res2, res3] = ...
     SAD_registration(u, u0, T, R, h, lambda, tau, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       u               ~ m*n*2 x 1     evaluation point
 %       u0              ~ m*n*2 x 1     development point for linearizing T
@@ -17,6 +27,7 @@ function [res1, res2, res3] = ...
 %       res1            ~ 1 x 1         convex conjugate value SAD*(u)
 %       res2            ~ 1 x 1         constraint violation measure
 %       res3            ~ m*n*2 x 1     prox step of SAD* at u
+%--------------------------------------------------------------------------
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 8, conjugate_flag = false; end

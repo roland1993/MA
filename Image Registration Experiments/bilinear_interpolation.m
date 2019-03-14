@@ -1,4 +1,14 @@
 function [img_p, dimg_p] = bilinear_interpolation(img, h, p)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   img         ~ m x n     image
 %   h           ~ 2 x 1     image step sizes [h_x, h_y]
@@ -6,6 +16,7 @@ function [img_p, dimg_p] = bilinear_interpolation(img, h, p)
 % OUT:
 %   img_p       ~ l x 1     bilinear interpolation of img at points p
 %   dimg_p      ~ l x 2     x-/y-derivative of interpol(img) at points p
+%--------------------------------------------------------------------------
 
 % get some more parameters
 [m, n] = size(img);

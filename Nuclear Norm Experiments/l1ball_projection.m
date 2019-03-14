@@ -1,13 +1,24 @@
 function y = l1ball_projection(x)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   x ~ n x 1       input point
 % OUT:
 %   y ~ n x 1       projection of x onto {||.|| <= 1}
-%
+%--------------------------------------------------------------------------
 % Linear Time Algorithm from
-%   Efficient Projections onto the l1-Ball for Learning in High Dimensions
+%  'Efficient Projections onto the l1-Ball for Learning in High Dimensions'
 % by
-%   John Duchi, Shai Shalev-Shwartz, Yoram Singer & Tushar Chandra
+%  John Duchi, Shai Shalev-Shwartz, Yoram Singer & Tushar Chandra
+%--------------------------------------------------------------------------
 
 x = x(:);       % force column vector
 v = abs(x);     % precompute pointwise abs(x_i)

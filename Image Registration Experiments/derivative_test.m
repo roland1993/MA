@@ -1,4 +1,14 @@
 function derivative_test(f, u, order)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   f       ~ function handle   target function, returns
 %                                   - f: N x 1 -> 1 x 1 function value
@@ -6,6 +16,7 @@ function derivative_test(f, u, order)
 %                                   - H: N x 1 -> N x N Hessian matrix
 %   u       ~ N x 1             evaluation point
 %   order   ~ N x 1             highest order derivative to test (2 at max)
+%--------------------------------------------------------------------------
 
 % set standard parameter
 if nargin == 2

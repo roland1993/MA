@@ -6,6 +6,16 @@
 %   MEAN-FREE & NO REFERENCE & USES UNIQUENESS-TERM
 
 function [u, L, SV_history] = mf_nn_registration_no_ref_ml(img, optPara)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   img     ~ cell(k, 1)        array of images
 %   optPara ~ struct            optimization parameters with fields
@@ -21,6 +31,7 @@ function [u, L, SV_history] = mf_nn_registration_no_ref_ml(img, optPara)
 % OUT:                                      PER OUTER ITERATE:
 %   u0              ~ cell(outerIter, 1)        displacement fields
 %   L0              ~ cell(outerIter, 1)        low rank components
+%--------------------------------------------------------------------------
 
 % make sure that interpolation routines are on search path
 if ~exist('evaluate_displacement.m', 'file')

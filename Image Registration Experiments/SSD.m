@@ -1,4 +1,14 @@
 function [f, df, d2f] = SSD(T, R, h, u)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   T   ~ m x n                 template image
 %   R   ~ m x n                 reference image
@@ -8,6 +18,7 @@ function [f, df, d2f] = SSD(T, R, h, u)
 %   f   ~ 1 x 1                 SSD ||T(u) - R|| ^ 2
 %   df  ~ (m*n*2) x 1           gradient dSSD/du
 %   d2f ~ (m*n*2) x (m*n*2)     approximate Hesssian of SSD (see line 42f.)
+%--------------------------------------------------------------------------
 
 % make sure u has the right format...
 u = reshape(u, [], 2);

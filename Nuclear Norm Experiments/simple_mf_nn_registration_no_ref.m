@@ -5,6 +5,16 @@
 
 function [u, primal_history, dual_history] = ...
     simple_mf_nn_registration_no_ref(img, optPara)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   img     ~ cell(k, 1)        array of images
 %   refIdx  ~ 1 x 1             index of reference image inside of img
@@ -23,6 +33,7 @@ function [u, primal_history, dual_history] = ...
 %   L               ~ cell(outerIter, 1)        low rank components
 %   primal_history  ~ cell(outerIter, 1)        primal iteration history
 %   dual_history    ~ cell(outerIter, 1)        dual iteration history
+%--------------------------------------------------------------------------
 
 % make sure that interpolation routines are on search path
 if ~exist('evaluate_displacement.m', 'file')

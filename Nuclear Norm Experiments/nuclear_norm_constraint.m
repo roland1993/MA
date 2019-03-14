@@ -1,5 +1,15 @@
 function [res1, res2, res3] = ...
     nuclear_norm_constraint(L, numImg, tau, nu, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       L               ~ m*n*numImg x 1    all images in one column vector
 %       numImg          ~ 1 x 1             number of images
@@ -15,6 +25,7 @@ function [res1, res2, res3] = ...
 %       res1            ~ 1 x 1             weighted spectral norm
 %       res2            ~ 1 x 1             constraint violation measure
 %       res3            ~ m*n x 1           prox-step of spectral norm
+%--------------------------------------------------------------------------
 
 % by default: evaluate constraint instead of its conjugate
 if nargin < 5, conjugate_flag = false; end

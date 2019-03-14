@@ -1,4 +1,14 @@
 function ML = multi_level(img, h)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   img ~ m x n         input image (high-res)
 %   h   ~ 2 x 1         grid width
@@ -7,6 +17,7 @@ function ML = multi_level(img, h)
 %                           img:    downsampled version 
 %                           s:      current resolution
 %                           h:      current grid width
+%--------------------------------------------------------------------------
 
 [m, n] = size(img);
 

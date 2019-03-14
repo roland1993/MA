@@ -1,4 +1,14 @@
 function alpha = armijo(f, x, dir, alpha0, beta, tau)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   f       ~ function handle       target function to minimize
 %   x       ~ k x 1                 current point
@@ -8,6 +18,7 @@ function alpha = armijo(f, x, dir, alpha0, beta, tau)
 %   tau     ~ 1 x 1                 step size shrinkage parameter
 % OUT:
 %   alpha   ~ 1 x 1                 step size
+%--------------------------------------------------------------------------
 
 % set parameters to standard values if not specified
 if nargin < 6, tau = 0.5; end

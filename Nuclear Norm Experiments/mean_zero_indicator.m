@@ -1,4 +1,14 @@
 function [res1, res2, res3] = mean_zero_indicator(u, s, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       u               ~ 2*m*n*k x 1   vector of k displacement fields
 %       s               ~ 3 x 1         dimensions & number of images
@@ -12,6 +22,7 @@ function [res1, res2, res3] = mean_zero_indicator(u, s, conjugate_flag)
 %       res1            ~ 1 x 1         delta_{span{r}}(u)
 %       res2            ~ 1 x 1         constraint violation measure
 %       res3            ~ 2*m*n*k x 1   prox = projection onto span{r}
+%--------------------------------------------------------------------------
 
 % fetch images dimensions etc.
 m = s(1);

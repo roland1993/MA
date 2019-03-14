@@ -1,5 +1,15 @@
 function [f, df, d2f] = ...
     objective_function(dist_fctn, reg_fctn, lambda, T, R, h, u)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   dist_fctn   ~ function handle       distance measure
 %   reg_fctn    ~ function handle       regularizer
@@ -12,6 +22,7 @@ function [f, df, d2f] = ...
 %   f           ~ 1 x 1                 value of objective function at u
 %   df          ~ (m*n*2) x 1           gradient df/du
 %   d2f         ~ (m*n*2) x (m*n*2)     (approx.) Hessian d2f/du^2
+%--------------------------------------------------------------------------
 
 % fetch [m, n] for regularizer input
 s = size(R);

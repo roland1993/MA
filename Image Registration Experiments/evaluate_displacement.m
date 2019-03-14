@@ -1,4 +1,14 @@
 function [img_u, dimg_u] = evaluate_displacement(img, h, u, omega, s_grid)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %   img     ~ m x n             image
 %   h       ~ 2 x 1             image step sizes [h_x, h_y]
@@ -9,6 +19,7 @@ function [img_u, dimg_u] = evaluate_displacement(img, h, u, omega, s_grid)
 % OUT:
 %   img_u   ~ k x l             interpolation of img over displaced grid
 %   dimg_u  ~ (k*l) x (k*l*2)   gradient of interpol(img)
+%--------------------------------------------------------------------------
 
 % get image resolution
 [m, n] = size(img);

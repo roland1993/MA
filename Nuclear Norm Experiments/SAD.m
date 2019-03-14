@@ -1,4 +1,14 @@
 function [res1, res2, res3] = SAD(L, I, sigma, conjugate_flag)
+%--------------------------------------------------------------------------
+% This file is part of my master's thesis entitled
+%           'Low rank- and sparsity-based image registration'
+% For the whole project see
+%           https://github.com/roland1993/MA
+% If you have questions contact me at
+%           roland.haase [at] student.uni-luebeck [dot] de
+% Source code is provided under the
+%           MIT Open Source License
+%--------------------------------------------------------------------------
 % IN:
 %       L               ~ m*n*numImg x 1    input variables
 %       I               ~ m*n*numImg x 1    I from SAD(L) = ||L - I||_1
@@ -13,6 +23,7 @@ function [res1, res2, res3] = SAD(L, I, sigma, conjugate_flag)
 %       res1            ~ 1 x 1             convex conjugate SAD*(L)
 %       res2            ~ 1 x 1             constraint violation measure
 %       res3            ~ m*n x 1           prox-step of SAD* for L
+%--------------------------------------------------------------------------
 
 % by default: evaluate SAD instead of its conjugate
 if nargin < 4, conjugate_flag = false; end
