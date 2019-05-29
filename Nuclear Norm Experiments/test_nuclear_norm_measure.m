@@ -26,9 +26,9 @@ if ~exist('evaluate_displacement.m')
     addpath(genpath('..'));
 end
 
-% load respiratory data if available
-if ~exist('respfilm1gray.mat')
-    error('Missing file: ''respfilm1gray.mat''!');
+% load cardiac mri data if available
+if ~exist('heart_mri.mat')
+    error('Missing file: ''heart_mri.mat''!');
 end
 
 % select experiment
@@ -56,8 +56,8 @@ while isempty(answer) || ...
 end
 
 % load film and normalize to [0 1]
-load('respfilm1gray.mat', 'A');
-A = (A - min(A(:))) / (max(A(:)) - min(A(:)));
+load('heart_mri.mat', 'data');
+A = (data - min(data(:))) / (max(data(:)) - min(data(:)));
 
 % number of frames to use
 numImg = 2;
@@ -80,7 +80,7 @@ vec = @(x) x(:);
 %% PRECOMPUTE WARPED IMAGES AND CORRESPONDING DATA TERM VALUES
 
 % placeholders for warped images
-numFrames = 31;
+numFrames = 51;
 t = linspace(-1, 1, numFrames);
 img_u = cell(numImg - 1, 1);
 for i = 1 : numImg - 1
@@ -97,7 +97,7 @@ center = (omega([4, 2]) + omega([3, 1])) / 2;
 if answer == 1
     
     % direction of moving image
-    dir = randn(1, 2);
+    dir = [1, -1];
     dir = dir / max(abs(dir));
     
 elseif answer == 2
@@ -132,15 +132,21 @@ if version <= 2
     L0 = zeros(m * n * numImg, 1);
     P0 = zeros(m * n * numImg, 1);
     
-else
+elseif version == 3
     
-    B = mean_free_operator(m, n, numImg);
-    K = [B; speye(m * n * numImg)];
-    norm_K = sqrt(2);
-    % ATTENTION: normest(K) PRODUCES FAULTY RESULTS!!!
+    K = mean_free_operator(m, n, numImg);
+    norm_K = 1;
     
     L0 = zeros(m * n * numImg, 1);
-    P0 = zeros(2 * m * n * numImg, 1);
+    P0 = zeros(m * n * numImg, 1);
+
+%     B = mean_free_operator(m, n, numImg);
+%     K = [B; speye(m * n * numImg)];
+%     norm_K = sqrt(2);
+%     % ATTENTION: normest(K) PRODUCES FAULTY RESULTS!!!
+%     
+%     L0 = zeros(m * n * numImg, 1);
+%     P0 = zeros(2 * m * n * numImg, 1);
     
 end
 
@@ -156,7 +162,7 @@ SSD = zeros(numFrames, 1);
 TV = zeros(numFrames, 1);
 
 % define discrete gradient operator K for evaluation of TV
-A = finite_difference_operator(m, n, h_grid);
+A = finite_difference_operator(m, n, h_grid, 1, 'linear');
 
 % column major image matrix (fixed first column = reference)
 I = zeros(m * n, numImg);
@@ -206,7 +212,7 @@ for i = 1 : numFrames
     if version == 1
         
         % set parameter mu
-        mu = 100;
+        mu = sqrt(m * n);
         G = @(L, c_flag) nuclear_norm(L, numImg, tau, mu, c_flag);
         F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
         
@@ -219,14 +225,15 @@ for i = 1 : numFrames
             nuclear_norm_constraint(L, numImg, tau, nu, c_flag);
         F = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
         
-    else
+    elseif version == 3
         
-        % compute nu from nuclear norm of mean-free I
-        D = reshape(B * vec(I), m * n, numImg);
+        % compute nu from nuclear norm of I
+        D = reshape(K * vec(I), m * n, numImg);
         [~, S, ~] = svd(D, 'econ');
         nu = 0.9 * sum(diag(S));
-        G = @(L, c_flag) zero_function(L, c_flag);
-        F = @(y, c_flag) F_composite(y, numImg, sigma, nu, I(:), c_flag);
+        F = @(L, c_flag) ...
+            nuclear_norm_constraint(L, numImg, tau, nu, c_flag);
+        G = @(L, c_flag) SAD(L, I(:), sigma, c_flag);
         
     end
     
@@ -351,25 +358,4 @@ for i = 1 : numFrames
     drawnow;
     pause(0.1);
     
-end
-
-%% LOCAL FUNCTION DEFINITIONS
-
-function [res1, res2, res3] = ...
-    F_composite(y, numImg, sigma, nu, b, conjugate_flag)
-
-mn = numel(y) / (2 * numImg);
-y1 = y(1 : numImg * mn);
-y2 = y(numImg * mn + 1 : end);
-
-[res1_F1, res2_F1, res3_F1] = ...
-    nuclear_norm_constraint(y1, numImg, sigma, nu, conjugate_flag);
-
-[res1_F2, res2_F2, res3_F2] = ...
-    SAD(y2, b, sigma, conjugate_flag);
-
-res1 = res1_F1 + res1_F2;
-res2 = max([res2_F1, res2_F2]);
-res3 = [res3_F1; res3_F2];
-
 end
