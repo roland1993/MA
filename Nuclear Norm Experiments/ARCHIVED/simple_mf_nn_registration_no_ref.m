@@ -1,4 +1,4 @@
-%   min_{u,L} delta_{|| . || <= nu}(B * [I_1(u_1), .., I_k(u_k), R])
+%   min_{u,L} delta_{|| . || <= nu}(B * [I_1(u_1), .., I_k(u_k)])
 %       + sum_i mu * TV(u_i) + delta_{mean(u_x) = 0, mean(u_y) = 0}(u)
 %
 %   MEAN-FREE & NO REFERENCE & UNIQUENESS-TERM
