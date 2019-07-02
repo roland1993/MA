@@ -36,16 +36,24 @@ hold on;
 %   ~> plot(..) always interpretes the horizontal as the first axis!
 g = cat(3, g(:, :, 2), g(:, :, 1));
 
+%
+IDX1 = round(linspace(1, m, m / s));
+IDX2 = round(linspace(1, n, n / s));
+
 % plot horizontal grid lines
-for i = 1 : s : m
-    plot(g(i, 1 : s : end, 1), g(i, 1 : s : end, 2), ...
-        style, 'LineWidth', 0.1, 'MarkerSize', 4);
+for i = IDX1
+    plot(g(i, :, 1), g(i, :, 2), ...
+        style, 'LineWidth', 1.75, 'MarkerSize', 6);
+    plot(g(i, IDX2, 1), g(i, IDX2, 2), 'ko', 'MarkerSize', 6, ...
+        'MarkerFaceColor', 'k');
 end
 
 % plot vertical grid lines
-for j = 1 : s : n
-    plot(g(1 : s : end, j, 1), g(1 : s : end, j, 2), ...
-        style, 'LineWidth', 0.1, 'MarkerSize', 4);
+for j = IDX2
+    plot(g(:, j, 1), g(:, j, 2), ...
+        style, 'LineWidth', 1.75, 'MarkerSize', 6);
+    plot(g(IDX1, j, 1), g(IDX1, j, 2), 'ko', 'MarkerSize', 6, ...
+        'MarkerFaceColor', 'k')
 end
 
 hold off;
