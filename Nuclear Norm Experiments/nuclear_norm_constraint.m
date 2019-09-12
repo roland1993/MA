@@ -27,6 +27,14 @@ function [res1, res2, res3] = ...
 %       res3            ~ m*n x 1           prox-step of spectral norm
 %--------------------------------------------------------------------------
 
+% use GPU?
+GPU = isa(L, 'gpuArray');
+if GPU
+    data_type = 'gpuArray';
+else
+    data_type = 'double';
+end
+
 % by default: evaluate constraint instead of its conjugate
 if nargin < 5, conjugate_flag = false; end
 
@@ -34,7 +42,7 @@ if nargin < 5, conjugate_flag = false; end
 L = reshape(L, [], numImg);
 
 % intialize error measure with zero
-res2 = 0;
+res2 = zeros(1, data_type);
 
 if ~conjugate_flag
     
@@ -43,7 +51,7 @@ if ~conjugate_flag
     S = diag(S);
     
     % return 0 as fctn. value of indicator
-    res1 = 0;
+    res1 = zeros(1, data_type);
     
     % distance to feasible region
     if sum(S) > nu

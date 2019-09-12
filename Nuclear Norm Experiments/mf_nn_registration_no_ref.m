@@ -36,6 +36,9 @@ function [u, L, SV_history] = ...
 %   dual_history    ~ cell(outerIter, 1)        dual iteration history
 %--------------------------------------------------------------------------
 
+% use GPU-support?
+GPU = true;
+
 % make sure that interpolation routines are on search path
 if ~exist('evaluate_displacement.m', 'file')
     addpath(genpath('..'));
@@ -91,7 +94,14 @@ A5 = sparse(4 * k * m * n, k * m * n);
 A6 = mean_free_operator(m, n, k);
 
 % set function handle to G-part of target function
-G_handle = @(x, c_flag) G(x, [m, n, k], c_flag);
+if GPU
+    m_gpu = gpuArray(m);
+    n_gpu = gpuArray(n);
+    k_gpu = gpuArray(k);
+    G_handle = @(x, c_flag) G(x, [m_gpu, n_gpu, k_gpu], c_flag);
+else
+    G_handle = @(x, c_flag) G(x, [m, n, k], c_flag);
+end
 
 % if plotting was requested -> create figure (handle)
 if doPlots
@@ -155,11 +165,30 @@ for o = 1 : outerIter
     sigma = sqrt(0.99 / norm_A_est ^ 2);
     
     % get function handle to F-part of target function
-    F_handle = @(y, c_flag) F(y, b, k, mu, nu, sigma, c_flag);
+    if GPU
+        b_gpu = gpuArray(b);
+        mu_gpu = gpuArray(mu);
+        nu_gpu = gpuArray(nu);
+        sigma_gpu = gpuArray(sigma);
+        F_handle = @(y, c_flag) ...
+            F(y, b_gpu, k_gpu, mu_gpu, nu_gpu, sigma_gpu, c_flag);
+    else
+        F_handle = @(y, c_flag) F(y, b, k, mu, nu, sigma, c_flag);
+    end
     
     % perform optimization
-    [x, p, primal_history, dual_history] = chambolle_pock( ...
-        F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
+    if GPU
+        A_gpu = gpuArray(A);
+        x_gpu = gpuArray(x);
+        p_gpu = gpuArray(p);
+        tau_gpu = gpuArray(tau);
+        [x, p, primal_history, dual_history] = chambolle_pock( ...
+            F_handle, G_handle, A_gpu, x_gpu, p_gpu, theta, ...
+            tau_gpu, sigma_gpu, maxIter, tol);
+    else
+        [x, p, primal_history, dual_history] = chambolle_pock( ...
+            F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
+    end
     
     % get displacements and low rank components from (primal) minimizer x
     u{o} = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
@@ -190,6 +219,7 @@ end
         %   F_2(y2) = sum_i mu * || y2_i ||_{2,1}
         %   F_3(y3) = delta_{|| . ||_* <= nu}(y3)
         
+        
         % get number of template images and number of pixels per image
         mn = numel(y) / (6 * k);
         
@@ -201,7 +231,11 @@ end
         if nargout == 3
             
             % initialize output
-            res3 = zeros(6 * k * mn, 1);
+            if isa(y, 'gpuArray')
+                res3 = zeros(6 * k * mn, 1, 'gpuArray');
+            else
+                res3 = zeros(6 * k * mn, 1);
+            end
             
             % apply SAD to y1-part
             [~, ~, res3_F1] = SAD(y1, b, sigma, conjugate_flag);

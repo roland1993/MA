@@ -24,29 +24,41 @@ function [res1, res2, res3] = mean_zero_indicator(u, s, conjugate_flag)
 %       res3            ~ 2*m*n*k x 1   prox = projection onto span{r}
 %--------------------------------------------------------------------------
 
+% use GPU?
+GPU = isa(u, 'gpuArray');
+if GPU
+    data_type = 'gpuArray';
+    data_type_log = 'gpuArray';
+else
+    data_type = 'double';
+    data_type_log = 'logical';
+end
+
 % fetch images dimensions etc.
 m = s(1);
 n = s(2);
 k = s(3);
 
 % seperate x- and y-components
-x_idx = repmat([true(m * n, 1); false(m * n, 1)], [k, 1]);
+x_idx = repmat([true(m * n, 1, data_type_log); ...
+    false(m * n, 1, data_type_log)], [k, 1]);
 u_x = u(x_idx);
-y_idx = repmat([false(m * n, 1); true(m * n, 1)], [k, 1]);
+y_idx = repmat([false(m * n, 1, data_type_log); ...
+    true(m * n, 1, data_type_log)], [k, 1]);
 u_y = u(y_idx);
 
 % normal-vector of mean-zero subspace
-r = ones(m * n * k, 1);
+r = ones(m * n * k, 1, data_type);
 norm_r_squared = m * n * k;
 
 if ~conjugate_flag
     
-    res1 = 0;
+    res1 = zeros(1, data_type);
     
     % distance from mean = 0
     res2 = max(abs([mean(u_x), mean(u_y)]));
     
-    res3 = 0 * u;
+    res3 = zeros(size(u), data_type);
     % projection of u_x to subspace r' * v = 0      <=>     u_x-mean = 0
     res3(x_idx) = u_x - ((r' * u_x) / norm_r_squared) * r;
     % projection of u_y to subspace r' * v = 0      <=>     u_y-mean = 0
@@ -54,9 +66,9 @@ if ~conjugate_flag
     
 else
     
-    res1 = 0;
+    res1 = zeros(1, data_type);
     
-    res3 = 0 * u;
+    res3 = zeros(size(u), data_type);
     % projection of u_x to subspace span{r}
     res3(x_idx) = ((r' * u_x) / norm_r_squared) * r;
     % projection of u_y to subspace span{r}

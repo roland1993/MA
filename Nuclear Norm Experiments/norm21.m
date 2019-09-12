@@ -25,11 +25,19 @@ function [res1, res2, res3] = norm21(v, mu, sigma, conjugate_flag)
 %       res3            ~ m*n*4 x 1     prox_[mu * ||.||_{2,1}](v)
 %--------------------------------------------------------------------------
 
+% use GPU?
+GPU = isa(v, 'gpuArray');
+if GPU
+    data_type = 'gpuArray';
+else
+    data_type = 'double';
+end
+
 % by default: evaluate ||v||_{2,1} instead of its conjugate
 if nargin < 4, conjugate_flag = false; end
 
 % initialize measure for hurt constraints with 0
-res2 = 0;
+res2 = zeros(1, data_type);
 
 % reshape v into 4 columns and compute pointwise 2-norm
 v = reshape(v, [], 4);

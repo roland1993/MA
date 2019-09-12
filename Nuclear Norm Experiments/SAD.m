@@ -25,11 +25,19 @@ function [res1, res2, res3] = SAD(L, I, sigma, conjugate_flag)
 %       res3            ~ m*n x 1           prox-step of SAD* for L
 %--------------------------------------------------------------------------
 
+% use GPU?
+GPU = isa(L, 'gpuArray');
+if GPU
+    data_type = 'gpuArray';
+else
+    data_type = 'double';
+end
+
 % by default: evaluate SAD instead of its conjugate
 if nargin < 4, conjugate_flag = false; end
 
 % initialize constraint measure with 0
-res2 = 0;
+res2 = zeros(1, data_type);
 
 if ~conjugate_flag
     % EITHER ~> evaluate SAD and Prox_[SAD] at L
@@ -40,7 +48,7 @@ if ~conjugate_flag
     if nargout == 3
         
         % prox-step for ||L - I||_1 =: SAD ~> pointwise shrinkage
-        res3 = zeros(size(L));
+        res3 = zeros(size(L), data_type);
         diff_LI = L - I;
         idx1 = (diff_LI > sigma);
         idx2 = (diff_LI < (-1) * sigma);

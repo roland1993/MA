@@ -20,6 +20,9 @@ function y = l1ball_projection(x)
 %  John Duchi, Shai Shalev-Shwartz, Yoram Singer & Tushar Chandra
 %--------------------------------------------------------------------------
 
+GPU = isa(x, 'gpuArray');
+if GPU, x = gather(x); end
+
 x = x(:);       % force column vector
 v = abs(x);     % precompute pointwise abs(x_i)
 n = numel(x);
@@ -66,5 +69,7 @@ else
     y = sign(x) .* w;
     
 end
+
+if GPU, y = gpuArray(y); end
 
 end
