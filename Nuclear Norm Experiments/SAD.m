@@ -25,30 +25,20 @@ function [res1, res2, res3] = SAD(L, I, sigma, conjugate_flag)
 %       res3            ~ m*n x 1           prox-step of SAD* for L
 %--------------------------------------------------------------------------
 
-% use GPU?
-GPU = isa(L, 'gpuArray');
-if GPU
-    data_type = 'gpuArray';
-else
-    data_type = 'double';
-end
-
 % by default: evaluate SAD instead of its conjugate
 if nargin < 4, conjugate_flag = false; end
-
-% initialize constraint measure with 0
-res2 = zeros(1, data_type);
 
 if ~conjugate_flag
     % EITHER ~> evaluate SAD and Prox_[SAD] at L
     
-    % compute SAD
-    res1 = sum(abs(L - I));
-    
     if nargout == 3
         
+        % dummy outputs
+        res1 = [];
+        res2 = [];
+        
         % prox-step for ||L - I||_1 =: SAD ~> pointwise shrinkage
-        res3 = zeros(size(L), data_type);
+        res3 = zeros(size(L));
         diff_LI = L - I;
         idx1 = (diff_LI > sigma);
         idx2 = (diff_LI < (-1) * sigma);
@@ -56,22 +46,41 @@ if ~conjugate_flag
         res3(idx1) = L(idx1) - sigma;
         res3(idx2) = L(idx2) + sigma;
         res3(idx3) = I(idx3);
-
+        
+    else
+        
+        % compute SAD
+        res1 = sum(abs(L - I));
+        
+        % constraint measure;
+        res2 = 0;
+        
     end
     
 else
     % OR ~> evaluate SAD* and Prox_[SAD*] at L
     
-    % compute SAD*(L) = delta_{||.||_inf <= 1}(L) + <L,I>
-    if max(abs(L)) > 1
-        res2 = max(abs(L)) - 1;
-    end
-    res1 = L' * I;
-    
     % compute prox-step for SAD* with Moreau's identity (if requested)
     if nargout == 3
+        
+        % dummy outputs
+        res1 = [];
+        res2 = [];
+        
         [~, ~, prox] = SAD(L / sigma, I, 1 / sigma, false);
         res3 = L - sigma * prox;
+        
+    else
+        
+        % compute SAD*(L) = delta_{||.||_inf <= 1}(L) + <L,I>
+        if max(abs(L)) > 1
+            res2 = max(abs(L)) - 1;
+        else
+            res2 = 0;
+        end
+        
+        res1 = L' * I;
+        
     end
     
 end

@@ -59,8 +59,8 @@ h_img = [1, 1];
 numLevels = min(floor(log2([m, n]) - 5)) + 1;
 
 % initialize output
-u = cell(numLevels, optPara.outerIter);
-L = cell(numLevels, optPara.outerIter);
+u = cell(numLevels, max(optPara.outerIter));
+L = cell(numLevels, max(optPara.outerIter));
 SV_history = cell(numLevels, 1);
 
 % get multi-level representation
@@ -96,12 +96,12 @@ for lev = 1 : numLevels
     doPlots = optPara.doPlots;
     if lev == 1
         maxIter = optPara.maxIter;
-        outerIter = optPara.outerIter;
-        nu_factor = optPara.nu_factor;
+        outerIter = optPara.outerIter(1);
+        nu_factor = optPara.nu_factor(1);
     else
         maxIter = optPara.maxIter;
-        outerIter = 1;
-        nu_factor = 0.99;
+        outerIter = optPara.outerIter(2);
+        nu_factor = optPara.nu_factor(2);
     end
     
     % initialize primal and dual variables (x and p)
@@ -158,7 +158,7 @@ for lev = 1 : numLevels
     L0 = x(2 * k * m * n + 1 : end);
     
     % initialize storage for singular values
-    SV_history{lev} = zeros(k, outerIter);
+    SV_history{lev} = zeros(k, max(outerIter));
 
     %-------BEGIN OUTER ITERATION-----------------------------------------%
     for o = 1 : outerIter
@@ -317,17 +317,36 @@ end
         x_u = x(1 : 2 * prod(s));
         x_l = x(2 * prod(s) + 1 : end);
         
-        % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
-        [res1_G1, res2_G1, res3_G1] = ...
-            mean_zero_indicator(x_u, s, conjugate_flag);
-        
-        % apply zero-function to x_l
-        [res1_G2, res2_G2, res3_G2] = zero_function(x_l, conjugate_flag);
-        
-        % combine outputs
-        res1 = res1_G1 + res1_G2;
-        res2 = max([res2_G1, res2_G2]);
-        res3 = [res3_G1; res3_G2];
+        if nargout == 3
+            
+            % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
+            [~, ~, res3_G1] = ...
+                mean_zero_indicator(x_u, s, conjugate_flag);
+            
+            % apply zero-function to x_l
+            [~, ~, res3_G2] = zero_function(x_l, conjugate_flag);
+            
+            % combine outputs
+            res3 = [res3_G1; res3_G2];
+            
+            % dummy outputs
+            res1 = [];
+            res2 = [];
+            
+        else
+            
+            % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
+            [res1_G1, res2_G1] = ...
+                mean_zero_indicator(x_u, s, conjugate_flag);
+            
+            % apply zero-function to x_l
+            [res1_G2, res2_G2] = zero_function(x_l, conjugate_flag);
+            
+            % combine outputs
+            res1 = res1_G1 + res1_G2;
+            res2 = max([res2_G1, res2_G2]);
+            
+        end
         
     end
 %-------------------------------------------------------------------------%

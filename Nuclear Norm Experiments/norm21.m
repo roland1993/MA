@@ -25,29 +25,11 @@ function [res1, res2, res3] = norm21(v, mu, sigma, conjugate_flag)
 %       res3            ~ m*n*4 x 1     prox_[mu * ||.||_{2,1}](v)
 %--------------------------------------------------------------------------
 
-% use GPU?
-GPU = isa(v, 'gpuArray');
-if GPU
-    data_type = 'gpuArray';
-else
-    data_type = 'double';
-end
-
 % by default: evaluate ||v||_{2,1} instead of its conjugate
 if nargin < 4, conjugate_flag = false; end
 
-% initialize measure for hurt constraints with 0
-res2 = zeros(1, data_type);
-
-% reshape v into 4 columns and compute pointwise 2-norm
-v = reshape(v, [], 4);
-norm_v = sqrt(sum(v .^ 2, 2));
-
 if ~conjugate_flag
     % EITHER ~> evaluate mu*||.||_{2,1} and its prox at v
-
-    % mu * ||v||_{2,1} = mu * sum_i ||v_i||_2
-    res1 = mu * sum(norm_v);
     
     if nargout == 3
         
@@ -57,24 +39,54 @@ if ~conjugate_flag
         [~, ~, conj_prox] = norm21(v(:) / sigma, mu, 1 / sigma, true);
         res3 = v(:) - sigma * conj_prox;
         
+        % dummy outputs
+        res1 = [];
+        res2 = [];
+        
+    else
+        
+        % constraint measure = 0
+        res2 = 0;
+        
+        % reshape v into 4 columns and compute pointwise 2-norm
+        v = reshape(v, [], 4);
+        norm_v = sqrt(sum(v .^ 2, 2));
+        
+        % mu * ||v||_{2,1} = mu * sum_i ||v_i||_2
+        res1 = mu * sum(norm_v);
+        
     end
     
 else
     % OR ~> evaluate delta_{||.||_{2,inf} <= mu} and its prox at v
     
-    % conjugate [mu * ||.||_{2,1}]* = delta_{||.||_{2,inf} <= mu}
-    if max(norm_v) > mu
-        res2 = max(norm_v) - mu;
-    end
-    res1 = 0;
+    % reshape v into 4 columns and compute pointwise 2-norm
+    v = reshape(v, [], 4);
+    norm_v = sqrt(sum(v .^ 2, 2));
     
     if nargout == 3
         
-        % pointwise prox: v_i := (mu * v_i) / max(mu, ||v_i||_2) 
+        % pointwise prox: v_i := (mu * v_i) / max(mu, ||v_i||_2)
         n = max(norm_v, mu);
         res3 = (mu * v) ./ n;
         res3 = res3(:);
         
+        % dummy outputs
+        res1 = [];
+        res2 = [];
+        
+    else
+        
+        % conjugate [mu * ||.||_{2,1}]* = delta_{||.||_{2,inf} <= mu}
+        if max(norm_v) > mu
+            res2 = max(norm_v) - mu;
+        else
+            res2 = 0;
+        end
+        
+        % fctn. value of indicator
+        res1 = 0;
+
     end
     
 end

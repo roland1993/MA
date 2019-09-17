@@ -27,51 +27,43 @@ function [res1, res2, res3] = ...
 %       res3            ~ m*n x 1           prox-step of spectral norm
 %--------------------------------------------------------------------------
 
-% use GPU?
-GPU = isa(L, 'gpuArray');
-if GPU
-    data_type = 'gpuArray';
-else
-    data_type = 'double';
-end
-
 % by default: evaluate constraint instead of its conjugate
 if nargin < 5, conjugate_flag = false; end
 
 % reshape L back into a matrix ~ m*n x numImg
 L = reshape(L, [], numImg);
 
-% intialize error measure with zero
-res2 = zeros(1, data_type);
+% compute svd of L
+[U, S, V] = svd(L, 'econ');
+S = diag(S);
 
 if ~conjugate_flag
     
-    % compute svd of L
-    [U, S, V] = svd(L, 'econ');
-    S = diag(S);
-    
-    % return 0 as fctn. value of indicator
-    res1 = zeros(1, data_type);
-    
-    % distance to feasible region
-    if sum(S) > nu
-        res2 = sum(S) - nu;
-    end
-    
     % get prox operator (l1-ball-projection of SV-vector)
     if nargout == 3
+        
         res3 = U * diag(nu * l1ball_projection(S / nu)) * V';
         res3 = res3(:);
+        
+        % dummy outputs
+        res1 = [];
+        res2 = [];
+        
+    else
+        
+        % distance to feasible region
+        if sum(S) > nu
+            res2 = sum(S) - nu;
+        else
+            res2 = 0;
+        end
+        
+        % return 0 as fctn. value of indicator
+        res1 = 0;
+        
     end
     
 else
-    
-    % get SVD of L
-    [U, S, V] = svd(L, 'econ');
-    S = diag(S);
-    
-    % conjugate of nn-constraint = spectral norm = max singular value
-    res1 = nu * max(S);
     
     % compute prox of spectral norm via prox of inf-norm of sv-vector S
     if nargout == 3
@@ -86,6 +78,18 @@ else
         % use prox step of sv-vector to compute prox of spectral norm
         res3 = U * diag(S_prox) * V';
         res3 = res3(:);
+        
+        % dummy outputs
+        res1 = [];
+        res2 = [];
+        
+    else
+        
+        % conjugate of nn-constraint = spectral norm = max singular value
+        res1 = nu * max(S);
+        
+        % no constraints present
+        res2 = 0;
         
     end
     
