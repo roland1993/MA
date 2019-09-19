@@ -12,6 +12,9 @@
 % demo script for mf_nn_registration_no_ref_ml.m
 clear all, close all, clc;
 
+%
+normalize = @(y) (y - min(y(:))) / (max(y(:)) - min(y(:)));
+
 % choose dataset from {synthetic, heart, kidney}
 dataset = 'kidney';
 
@@ -74,7 +77,7 @@ switch dataset
         IDX = round(linspace(1, size(A, 3)/ 3, k));
         img = cell(1, k);
         for i = 1 : k
-            img{i} = A(:, :, IDX(i));
+            img{i} = normalize(A(:, :, IDX(i)));
         end
         
         % downsampling
@@ -88,11 +91,11 @@ switch dataset
         optPara.theta = 1;
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
-        optPara.outerIter = [25 2];
-        optPara.mu = 2e-1;
+        optPara.outerIter = [15 2];
+        optPara.mu = 1.25e-1;
         optPara.nu_factor = [0.9 1];
         optPara.bc = 'neumann';
-        optPara.doPlots = false;
+        optPara.doPlots = true;
         
     otherwise
         error('No such dataset!');
