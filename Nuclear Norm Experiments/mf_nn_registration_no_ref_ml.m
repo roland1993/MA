@@ -56,7 +56,7 @@ h_img = [1, 1];
 
 %-------BEGIN MULTI LEVEL-------------------------------------------------%
 % resolution at lowest level: m, n >= 2 ^ 5
-numLevels = min(floor(log2([m, n]) - 5)) + 1;
+numLevels = min(floor(log2([m, n]) - 3)) + 1;
 
 % initialize output
 u = cell(numLevels, max(optPara.outerIter));
