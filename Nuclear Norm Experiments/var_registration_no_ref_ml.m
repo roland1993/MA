@@ -51,7 +51,7 @@ end
 
 % get image resolution etc.
 [m, n] = size(img{1});
-h_img = [1, 1];
+omega = [0, m, 0, n];
 
 %-------BEGIN MULTI LEVEL-------------------------------------------------%
 % resolution at lowest level: m, n >= 2 ^ 5
@@ -81,8 +81,7 @@ for lev = 1 : numLevels
     % get image resolution at current level
     [m, n] = size(ML{lev, 1});
     
-    % image region
-    omega = [0, m, 0, n];
+    % compute grid steps
     h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
     
     % set optimization parameters
@@ -146,7 +145,7 @@ for lev = 1 : numLevels
         dT = cell(k, 1);
         for i = 1 : k
             [T_u(:, :, i), dT{i}] = evaluate_displacement( ...
-                ML{lev, i}, h_img, u0(:, :, i));
+                ML{lev, i}, h_grid, u0(:, :, i));
             b((i - 1) * m * n + 1 : i * m * n) = ...
                 vec(T_u(:, :, i)) - dT{i} * vec(u0(:, :, i));
         end
@@ -170,7 +169,7 @@ for lev = 1 : numLevels
         sigma = sqrt(0.99 / norm_A_est ^ 2);
         
         % get function handle to F-part of target function
-        F_handle = @(y, c_flag) F(y, (-b), k, mu, sigma, c_flag);
+        F_handle = @(y, c_flag) F(y, (-b), k, h_grid, mu, sigma, c_flag);
         
         % perform optimization
         [x, p, primal_history, dual_history] = chambolle_pock( ...
@@ -200,10 +199,10 @@ end
 
 %-------BEGIN LOCAL FUNCTION DEFINITIONS----------------------------------%
     function [res1, res2, res3] = ...
-            F(y, b, k, mu, sigma, conjugate_flag)
+            F(y, b, k, h_grid, mu, sigma, conjugate_flag)
         % splits input y = [y1; y2] and computes
-        %   F_1(y1) = 0.5*|| y1 - b ||_2^2
-        %   F_2(y2) = sum_i mu * || y2_i ||_{2,1}
+        %   F_1(y1) = 0.5 * h1 * h2 * || y1 - b ||_2^2
+        %   F_2(y2) = mu * sum_i h1 * h2 * || y2_i ||_{2,1}
         
         % get number of template images and number of pixels per image
         mn = numel(y) / (5 * k);
@@ -218,14 +217,15 @@ end
             res3 = zeros(5 * k * mn, 1);
             
             % apply SAD to y1-part
-            [~, ~, res3_F1] = SSD(y1, b, sigma, conjugate_flag);
+            [~, ~, res3_F1] = ...
+                SSD(y1, b, prod(h_grid), sigma, conjugate_flag);
             res3(1 : k * mn) = res3_F1;
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i
             y2 = reshape(y2, 4 * mn, k);
             for j = 1 : k
-                [~, ~, res3_F2] = ...
-                    norm21(y2(:, j), mu, sigma, conjugate_flag);
+                [~, ~, res3_F2] = norm21(y2(:, j), ...
+                    mu * prod(h_grid), sigma, conjugate_flag);
                 res3(k * mn + (j - 1) * 4 * mn + 1 : ...
                         k * mn + j * 4 * mn) = res3_F2;
             end
@@ -237,15 +237,16 @@ end
         else
             
             % apply F1 = SAD to y1-part
-            [res1_F1, res2_F1] = SSD(y1, b, sigma, conjugate_flag);
+            [res1_F1, res2_F1] = ...
+                SSD(y1, b, prod(h_grid), sigma, conjugate_flag);
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i
             y2 = reshape(y2, 4 * mn, k);
             res1_F2 = 0;
             res2_F2 = 0;
             for j = 1 : k
-                [res1_F2_i, res2_F2_i] = ...
-                    norm21(y2(:, j), mu, sigma, conjugate_flag);
+                [res1_F2_i, res2_F2_i] = norm21(y2(:, j), ...
+                    mu * prod(h_grid), sigma, conjugate_flag);
                 res1_F2 = res1_F2 + res1_F2_i;
                 res2_F2 = max(res2_F2, res2_F2_i);
             end

@@ -1,4 +1,4 @@
-function [res1, res2, res3] = SSD(x, g, tau, conjugate_flag)
+function [res1, res2, res3] = SSD(x, g, lambda, tau, conjugate_flag)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -12,21 +12,22 @@ function [res1, res2, res3] = SSD(x, g, tau, conjugate_flag)
 % IN:
 %       x               ~ m*n*numImg x 1    input variables
 %       g               ~ m*n*numImg x 1    g in SSD(x) = 0.5||x - g||_2^2
+%       lambda          ~ 1 x 1             weighting parameter
 %       tau             ~ 1 x 1             prox step size
-%       conjugate_flag  ~ logical           evaluate SSD or conjugate?
+%       conjugate_flag  ~ logical           evaluate conjugate?
 % OUT:
 %   IF NOT conjugate_flag:
-%       res1            ~ 1 x 1             function value SSD(x)
+%       res1            ~ 1 x 1             function value lambda*SSD(x)
 %       res2            ~ 1 x 1             constraint violation measure
-%       res3            ~ m*n x 1           prox-step of SSD for x
+%       res3            ~ m*n x 1           prox of lambda*SSD for x
 %   IF conjugate_flag:
-%       res1            ~ 1 x 1             convex conjugate SSD*(x)
+%       res1            ~ 1 x 1             conjugate [lambda*SSD]*(x)
 %       res2            ~ 1 x 1             constraint violation measure
-%       res3            ~ m*n x 1           prox-step of SSD* for x
+%       res3            ~ m*n x 1           prox of [lambda*SSD]* for x
 %--------------------------------------------------------------------------
 
-% by default: evaluate SSD instead of its conjugate
-if nargin < 4, conjugate_flag = false; end
+% % by default: evaluate SSD instead of its conjugate
+% if nargin < 4, conjugate_flag = false; end
 
 % initialize constraint violation measure with 0
 res2 = 0;
@@ -39,12 +40,12 @@ if ~conjugate_flag
         res1 = [];
         
         % prox-step
-        res3 = (x + tau * g) / (1 + tau);
+        res3 = (x + (lambda * tau) * g) / (1 + (lambda * tau));
 
     else
         
         % compute SSD
-        res1 = 0.5 * sum((x - g) .^ 2);
+        res1 = lambda * 0.5 * sum((x - g) .^ 2);
         
     end
     
@@ -56,13 +57,14 @@ else
         
         res1 = [];
         
-        [~, ~, prox] = SSD(x / tau, g, 1 / tau, false);
+        [~, ~, prox] = SSD(x / tau, g, lambda, 1 / tau, false);
         res3 = x - tau * prox;
         
     else
         
         % compute SSD*(x) = 0.5 * ||x||_2^2 + <x, g>
-        res1 = 0.5 * sum(x .^ 2) + (x' * g);
+        res1 = ...
+            lambda * (0.5 * sum((x / lambda) .^ 2) + ((x / lambda)' * g));
         
     end
     
