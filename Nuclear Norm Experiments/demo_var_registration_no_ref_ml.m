@@ -13,7 +13,7 @@
 clear all, close all, clc;
 
 % choose dataset from {synthetic, heart, kidney}
-dataset = 'kidney';
+dataset = 'heart';
 
 switch dataset
     case 'synthetic'
@@ -29,7 +29,7 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [15 2];
-        optPara.mu = 5e-2;
+        optPara.mu = 7.5e-2;
         optPara.bc = 'neumann';
         optPara.doPlots = true;
         
@@ -54,7 +54,7 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [15 2];
-        optPara.mu = 2.5e-2;
+        optPara.mu = 1.5e-2;
         optPara.bc = 'neumann';
         optPara.doPlots = true;
         
@@ -81,7 +81,7 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [15 2];
-        optPara.mu = 2e-2;
+        optPara.mu = 4e-2;
         optPara.bc = 'neumann';
         optPara.doPlots = true;
         

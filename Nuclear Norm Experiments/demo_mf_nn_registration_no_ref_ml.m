@@ -16,7 +16,7 @@ clear all, close all, clc;
 normalize = @(y) (y - min(y(:))) / (max(y(:)) - min(y(:)));
 
 % choose dataset from {synthetic, heart, kidney}
-dataset = 'kidney';
+dataset = 'heart';
 
 switch dataset
     case 'synthetic'
@@ -31,7 +31,7 @@ switch dataset
         optPara.theta = 1;
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
-        optPara.outerIter = [15 2];
+        optPara.outerIter = [16 2];
         optPara.mu = 2e-1;
         optPara.nu_factor = [0.9 0.9];
         optPara.bc = 'neumann';
