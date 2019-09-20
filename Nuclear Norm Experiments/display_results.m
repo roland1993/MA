@@ -76,6 +76,20 @@ else
     
 end
 
+% indexing for selected quivers
+if m >= 50
+    IDX1 = round(linspace(1, m, 50));
+else
+    IDX1 = 1 : m;
+end
+if n >= 50
+    IDX2 = round(linspace(1, n, 50));
+else
+    IDX2 = 1 : n;
+end
+IDX = (IDX2 - 1) * m + IDX1';
+IDX = IDX(:);
+
 %-----------------PLOTTING------------------------------------------------%
 
 % case 1: with reference & low-rank-part
@@ -90,8 +104,8 @@ if reference && lowrank
         imshow(img{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
         if i <= k
             hold on;
-            quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-                u(:, 2, i), u(:, 1, i), 0, 'r');
+            quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
+                u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
             hold off;
             title(sprintf('T_{%d} with u_{%d}', i, i));
         else
@@ -132,8 +146,8 @@ if reference && ~lowrank
         imshow(img{IDX(i)}, [0 1], 'InitialMagnification', 'fit');
         if i <= k
             hold on;
-            quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-                u(:, 2, i), u(:, 1, i), 0, 'r');
+            quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
+                u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
             hold off;
             title(sprintf('T_{%d} with u_{%d}', i, i));
         else
@@ -169,8 +183,8 @@ if ~reference && lowrank
         subplot(3, k, i);
         imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
         hold on;
-        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-            u(:, 2, i), u(:, 1, i), 0, 'r');
+        quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
+            u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
         hold off;
         title(sprintf('T_{%d} with u_{%d}', i, i));
         
@@ -208,8 +222,8 @@ if ~reference && ~lowrank
         subplot(2, k, i);
         imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
         hold on;
-        quiver(cc_grid(:, 2), cc_grid(:, 1), ...
-            u(:, 2, i), u(:, 1, i), 0, 'r');
+        quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
+            u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
         hold off;
         title(sprintf('T_{%d} with u_{%d}', i, i));
         
