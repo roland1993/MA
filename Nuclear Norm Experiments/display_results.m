@@ -29,9 +29,11 @@ if exist('fh', 'var') && ~isempty(fh)
     figure(fh);
     colormap gray(256);
 else
-    figure;
+    fh = figure;
     colormap gray(256);
 end
+
+set(gcf, 'units', 'normalized', 'outerposition', [0 0 1 1]);
 
 %-----------------EVALUATE DISPLACEMENTS----------------------------------%
 
