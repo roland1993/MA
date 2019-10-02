@@ -23,22 +23,14 @@ function [res1, res2, res3] = zero_function(x, conjugate_flag)
 %       res3            ~ l x 1         prox of delta{0} = 0 for all x
 %--------------------------------------------------------------------------
 
-% use GPU?
-GPU = isa(x, 'gpuArray');
-if GPU
-    data_type = 'gpuArray';
-else
-    data_type = 'double';
-end
-
 if ~conjugate_flag
-    res1 = zeros(1, data_type);
-    res2 = zeros(1, data_type);
+    res1 = 0;
+    res2 = 0;
     if nargout == 3, res3 = x; end
 else
-    res1 = zeros(1, data_type);
+    res1 = 0;
     res2 = max(abs(x));
-    if nargout == 3, res3 = zeros(size(x), data_type); end
+    if nargout == 3, res3 = zeros(size(x)); end
 end
 
 end
