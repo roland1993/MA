@@ -127,17 +127,14 @@ for o = 1 : outerIter
             vec(T_u(:, :, i)) - dT{i} * vec(u0(:, :, i));
     end
     
-    % get low-rank image-matrix
-    if o == 1
-        L_star = vec(T_u); 
-    else
-        L_star = vec(L{o - 1});
-    end
-    
     % estimate new threshold nu from nn of low-rank mean-free image-matrix
-    D = reshape(A6 * L_star, m * n, k);
-    [~, S, ~] = svd(D, 'econ');
-    nu = nu_factor * sum(diag(S));
+    if o == 1
+        D = reshape(A6 * vec(T_u), m * n, k);
+        [~, S, ~] = svd(D, 'econ');
+        nu = nu_factor * sum(diag(S));
+    else
+        nu = nu_factor * nu;
+    end
     
     % upper left block of A ~> template image gradients
     A1 = -blkdiag(dT{:});
