@@ -107,7 +107,7 @@ if reference && lowrank
         if i <= k
             hold on;
             quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
-                u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
+                u(IDX, 2, i), u(IDX, 1, i), 1, 'r');
             hold off;
             title(sprintf('T_{%d} with u_{%d}', i, i));
         else
@@ -149,7 +149,7 @@ if reference && ~lowrank
         if i <= k
             hold on;
             quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
-                u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
+                u(IDX, 2, i), u(IDX, 1, i), 1, 'r');
             hold off;
             title(sprintf('T_{%d} with u_{%d}', i, i));
         else
@@ -186,7 +186,7 @@ if ~reference && lowrank
         imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
         hold on;
         quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
-            u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
+            u(IDX, 2, i), u(IDX, 1, i), 1, 'r');
         hold off;
         title(sprintf('T_{%d} with u_{%d}', i, i));
         
@@ -225,7 +225,7 @@ if ~reference && ~lowrank
         imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
         hold on;
         quiver(cc_grid(IDX, 2), cc_grid(IDX, 1), ...
-            u(IDX, 2, i), u(IDX, 1, i), 0, 'r');
+            u(IDX, 2, i), u(IDX, 1, i), 1, 'r');
         hold off;
         title(sprintf('T_{%d} with u_{%d}', i, i));
         
