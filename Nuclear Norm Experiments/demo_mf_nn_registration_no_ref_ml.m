@@ -12,6 +12,8 @@
 % demo script for mf_nn_registration_no_ref_ml.m
 clear all, close all, clc;
 
+exp_begin();
+
 %
 normalize = @(y) (y - min(y(:))) / (max(y(:)) - min(y(:)));
 
@@ -22,10 +24,15 @@ switch dataset
     case 'synthetic'
         
         % generate data
-        m = 200;    n = 200;    k = 8;
-        data = dynamicTestImage(m, n, k);
+        m = 200;    n = 200;    k = 10;
+        [data, LM_data] = dynamicTestImage(m, n, k);
         img = cell(k, 1);
-        for i = 1 : k, img{i} = data(:, :, i); end
+        LM = cell(k, 1);
+        for i = 1 : k
+            img{i} = data(:, :, i);
+            LM{i} = LM_data(:, :, i);
+        end
+        omega = [0, m, 0, n];
         
         % set optimization parameters
         optPara.theta = 1;
@@ -41,13 +48,6 @@ switch dataset
         
         % load data
         load('heart_mri.mat');
-        IDX = [ 003, 010, 017, ...
-                032, 039, 045, ...
-                060, 066, 073, ...
-                090, 096, 104, ...
-                121, 126, 134, ...
-                154, 159, 167, ...
-                194, 197, 206];
         k = length(IDX);
         
         % downsampling
@@ -57,6 +57,13 @@ switch dataset
             img{i} = conv2(data(:, :, IDX(i)), ...
                 ones(factor) / factor ^ 2, 'same');
             img{i} = img{i}(1 : factor : end, 1 : factor : end);
+        end
+        [m, n] = size(img{1});
+        omega = [0, m, 0, n];
+        
+        % adjust scaling of landmarks
+        for i = 1 : k
+            LM{i} = [m n] .* LM_IDX{i};
         end
         
         % set optimization parameters
@@ -69,50 +76,101 @@ switch dataset
         optPara.bc = 'neumann';
         optPara.doPlots = true;
         
-    case 'kidney'
-        
-        % load data
-        load('respfilm1gray.mat');
-        k = 12;
-        IDX = round(linspace(1, size(A, 3)/ 3, k));
-        img = cell(1, k);
-        for i = 1 : k
-            img{i} = normalize(A(:, :, IDX(i)));
-        end
-        
-        % downsampling
-        factor = 2;
-        for i = 1 : k
-            img{i} = conv2(img{i}, ones(factor) / factor ^ 2, 'same');
-            img{i} = img{i}(1 : factor : end, 1 : factor : end);
-        end
-        
-        % set optimization parameters
-        optPara.theta = 1;
-        optPara.maxIter = 2000;
-        optPara.tol = 1e-3;
-        optPara.outerIter = [15 2];
-        optPara.mu = 1.25e-1;
-        optPara.nu_factor = [0.9 1];
-        optPara.bc = 'neumann';
-        optPara.doPlots = true;
+        %     case 'kidney'
+        %
+        %         % load data
+        %         load('respfilm1gray.mat');
+        %         k = 12;
+        %         IDX = round(linspace(1, size(A, 3)/ 3, k));
+        %         img = cell(1, k);
+        %         for i = 1 : k
+        %             img{i} = normalize(A(:, :, IDX(i)));
+        %         end
+        %
+        %         % downsampling
+        %         factor = 2;
+        %         for i = 1 : k
+        %             img{i} = conv2(img{i}, ones(factor) / factor ^ 2, 'same');
+        %             img{i} = img{i}(1 : factor : end, 1 : factor : end);
+        %         end
+        %
+        %         % set optimization parameters
+        %         optPara.theta = 1;
+        %         optPara.maxIter = 2000;
+        %         optPara.tol = 1e-3;
+        %         optPara.outerIter = [15 2];
+        %         optPara.mu = 1.25e-1;
+        %         optPara.nu_factor = [0.9 1];
+        %         optPara.bc = 'neumann';
+        %         optPara.doPlots = true;
         
     otherwise
         error('No such dataset!');
         
 end
 
+% save name of method for later
+optPara.method = mfilename;
+
 % call registration routine
 tic;
 [u, L, SV_history] = mf_nn_registration_no_ref_ml(img, optPara);
 toc;
 
-%% display results
+% fetch results
+uStar = u{end, optPara.outerIter(2)};
+LStar = L{end, optPara.outerIter(2)};
 
+% evaluate results
+[xx, yy] = cell_centered_grid(omega, [m, n]);
+p = [xx(:), yy(:)];
 img_u = cell(k, 1);
+LM_transformed = cell(k, 1);
+
 for i = 1 : k
-    img_u{i} = evaluate_displacement(img{i}, [1, 1], u{end, 1}(:, :, i));
+    
+    % get transformed images
+    img_u{i} = evaluate_displacement(img{i}, [1, 1], uStar(:, :, i));
+
+    % get transformed grid
+    g = p + uStar(:, :, i);
+    
+    for j = 1 : size(LM{i}, 1)
+        
+        % find closest point in transformed grid to current landmark
+        %   -> approximate inversion of (id + u)
+        [~, min_idx]  = min(sum((g - LM{i}(j, :)) .^ 2, 2));
+        
+        % refine grid around initial guess min_idxs
+        omega_loc = [p(min_idx, 1) - 5, p(min_idx, 1) + 5, p(min_idx, 2) - 5, p(min_idx, 2) + 5];
+        [xx_loc, yy_loc] = cell_centered_grid(omega_loc, [500, 500]);
+        p_loc = [xx_loc(:), yy_loc(:)];
+        uStar_loc(:, 1) = bilinear_interpolation(reshape(uStar(:, 1, i), [m, n]), [1, 1], p_loc);
+        uStar_loc(:, 2) = bilinear_interpolation(reshape(uStar(:, 2, i), [m, n]), [1, 1], p_loc);
+        g_loc = p_loc + uStar_loc;
+        [~, min_idx_loc] = min(sum((g_loc - LM{i}(j, :)) .^ 2, 2));
+        LM_transformed{i}(j, :) = p_loc(min_idx_loc, :);
+        
+    end
+    
 end
+
+% evaluate landmark performance: mean distance to mean lm position
+for i = 1 : k
+    y(:, :, i) = LM{i};
+end
+y_bar = mean(y, 3);
+a = sum(sum((y - y_bar) .^ 2, 2), 3) / k
+
+for i = 1 : k
+    z(:, :, i) = LM_transformed{i};
+end
+z_bar = mean(z, 3);
+b = sum(sum((z - z_bar) .^ 2, 2), 3) / k
+
+%
+exp_save('data');
+exp_end();
 
 % input, output and low rank components in comparison
 figure;
@@ -121,12 +179,18 @@ while true
     for i = 1 : k
         subplot(1, 3, 1);
         imshow(img{i}, [], 'InitialMagnification', 'fit');
+        hold on
+        scatter(LM{i}(:, 2), LM{i}(:, 1), 'bo', 'MarkerFaceColor', 'red');
+        hold off
         title(sprintf('input T_{%d}', i));
         subplot(1, 3, 2);
         imshow(img_u{i}, [], 'InitialMagnification', 'fit');
+        hold on
+        scatter(LM_transformed{i}(:, 2), LM_transformed{i}(:, 1), 'bo', 'MarkerFaceColor', 'red');
+        hold off
         title(sprintf('output T_{%d}(u_{%d})', i, i));
         subplot(1, 3, 3);
-        imshow(L{end, 1}(:, :, i), [], 'InitialMagnification', 'fit');
+        imshow(LStar(:, :, i), [], 'InitialMagnification', 'fit');
         title(sprintf('output L_{%d}', i));
         waitforbuttonpress;
     end
