@@ -125,7 +125,6 @@ switch data_set
         optPara.theta = 1;
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
-        optPara.weighting = 0.5;
         optPara.outerIter = [20 2];
         optPara.mu = 1e-1;
         optPara.nu_factor = [0.975 0.975];
