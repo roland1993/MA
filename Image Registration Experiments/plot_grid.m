@@ -42,18 +42,14 @@ IDX2 = round(linspace(1, n, n / s));
 
 % plot horizontal grid lines
 for i = IDX1
-    plot(g(i, :, 1), g(i, :, 2), ...
-        style, 'LineWidth', 1.75, 'MarkerSize', 6);
-    plot(g(i, IDX2, 1), g(i, IDX2, 2), 'ko', 'MarkerSize', 6, ...
-        'MarkerFaceColor', 'k');
+    plot(g(i, :, 1), g(i, :, 2), style);
+%     plot(g(i, IDX2, 1), g(i, IDX2, 2), 'ko');
 end
 
 % plot vertical grid lines
 for j = IDX2
-    plot(g(:, j, 1), g(:, j, 2), ...
-        style, 'LineWidth', 1.75, 'MarkerSize', 6);
-    plot(g(IDX1, j, 1), g(IDX1, j, 2), 'ko', 'MarkerSize', 6, ...
-        'MarkerFaceColor', 'k')
+    plot(g(:, j, 1), g(:, j, 2), style);
+%     plot(g(IDX1, j, 1), g(IDX1, j, 2), 'ko');
 end
 
 hold off;
