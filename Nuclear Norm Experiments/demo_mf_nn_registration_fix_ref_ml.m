@@ -21,7 +21,7 @@ normalize = @(y) (y - min(y(:))) / (max(y(:)) - min(y(:)));
 % select data set from {'BlinkingArrow', 'CarTruck', 'CrossingCars', ...
 %   'FlyingSnow', 'NightAndSnow', 'RainBlur', 'RainFlares', ...
 %   'ReflectingCar', 'ShadowOnTruck', 'SunFlare', 'WetAutobahn'}
-data_set = 'WetAutobahn';
+data_set = 'ShadowOnTruck';
 data_path = sprintf('../Data/ChallengingSequences/%s/sequence', data_set);
 
 switch data_set
@@ -32,31 +32,31 @@ switch data_set
         IDX = 1 : 10;
         k = numel(IDX);
         img = cell(1, k);
-%         factor = 2;
+        factor = 2;
         for i = 1 : k
             img{i} = normalize(double( ...
                 sub_imread(sprintf('%s/%06d_0.pgm', data_path, IDX(i)))));
-%             img{i} = conv2(img{i}, ones(factor) / factor ^ 2, 'same');
-%             img{i} = img{i}(1 : factor : end, 1 : factor : end);
+            img{i} = conv2(img{i}, ones(factor) / factor ^ 2, 'same');
+            img{i} = img{i}(1 : factor : end, 1 : factor : end);
         end
         
         % optimization parameters
         optPara.theta = 1;
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
-        optPara.outerIter = [20 1];
+        optPara.outerIter = [16 2];
         optPara.mu = 7.5e-2;
         optPara.nu_factor = [0.95 0.95];
         optPara.bc = 'neumann';
-        optPara.doPlots = true;
+        optPara.doPlots = false;
         
         % select reference
         ref_idx = 4 - IDX(1) + 1;
         
-    case 'RainBlur'
+    case 'ShadowOnTruck'
         
         % load + downsample images
-        IDX = 10 : 15;
+        IDX = 9 : 18;
         k = numel(IDX);
         img = cell(1, k);
         factor = 2;
@@ -75,10 +75,10 @@ switch data_set
         optPara.mu = 5e-2;
         optPara.nu_factor = [0.95 0.95];
         optPara.bc = 'neumann';
-        optPara.doPlots = true;
+        optPara.doPlots = false;
         
         % select reference
-        ref_idx = 11 - IDX(1) + 1;
+        ref_idx = 13 - IDX(1) + 1;
         
     case 'BlinkingArrow'
         
@@ -125,11 +125,11 @@ switch data_set
         optPara.theta = 1;
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
-        optPara.outerIter = [20 2];
-        optPara.mu = 1e-1;
-        optPara.nu_factor = [0.975 0.975];
+        optPara.outerIter = [16 2];
+        optPara.mu = 7.5e-2;
+        optPara.nu_factor = [0.95 0.95];
         optPara.bc = 'neumann';
-        optPara.doPlots = true;
+        optPara.doPlots = false;
         
         % select reference
         ref_idx = 20 - IDX(1) + 1;
@@ -145,10 +145,12 @@ tic;
 [u, L, SV_history] = mf_nn_registration_fix_ref_ml(img, ref_idx, optPara);
 toc;
 
+% evaluate results
+uStar = u{end, optPara.outerIter(2)};
+LStar = L{end, optPara.outerIter(2)};
 img_u = cell(k, 1);
 for i = 1 : k
-    img_u{i} = evaluate_displacement(img{i}, [1, 1], ...
-        u{end, optPara.outerIter(2)}(:, :, i));
+    img_u{i} = evaluate_displacement(img{i}, [1, 1], uStar(:, :, i));
 end
 
 % end tracking
@@ -169,7 +171,7 @@ while true
         imshow(img_u{i}, [], 'InitialMagnification', 'fit');
         title(sprintf('output T_{%d}(u_{%d})', i, i));
         subplot(1, 3, 3);
-        imshow(L{end, optPara.outerIter(2)}(:, :, i), [], 'InitialMagnification', 'fit');
+        imshow(LStar(:, :, i), [], 'InitialMagnification', 'fit');
         title(sprintf('output L_{%d}', i));
         waitforbuttonpress;
     end
@@ -177,9 +179,9 @@ end
 
 % optical flow visualization
 for i = 1 : k
-    uStar{i} = ...
-        reshape(u{end, optPara.outerIter(2)}(:, :, i), [size(img{1}), 2]);
-    of{i} = flow_visualization(uStar{i}(:, :, 1), uStar{i}(:, :, 2));
+    of{i} = flow_visualization(...
+        reshape(uStar(:, 1, i), size(img{1})), ...
+        reshape(uStar(:, 2, i), size(img{1})));
     overlay{i} = createOverlayImage(img{i}, of{i});
 end
 
