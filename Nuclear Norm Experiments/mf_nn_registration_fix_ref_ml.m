@@ -205,8 +205,18 @@ for lev = 1 : numLevels
             F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
         
         % get displacements and low rank components from minimizer x
-        u0 = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
+        u0 = reshape(x(1 : 2 * k * m * n), [m n 2 k]);
         L0 = x(2 * k * m * n + 1 : end);
+        
+        % add median filtering
+%         w_size = max([2 * ceil((0.01 * m - 1) * 0.5) + 1, ...
+%             2 * ceil((0.01 * n - 1) * 0.5) + 1, 1]);
+        for i = 1 : k
+            u0(:, :, 1, i) = medfilt2(u0(:, :, 1, i), [5 5]);
+            u0(:, :, 2, i) = medfilt2(u0(:, :, 2, i), [5 5]);
+        end
+        x(1 : 2 * k * m * n) = u0(:);
+        u0 = reshape(u0, [m * n, 2, k]);
         
         % store results
         u{lev, o} = u0;
