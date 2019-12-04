@@ -50,14 +50,6 @@ function [x_star, y_star, primal_history, dual_history] = ...
 %                                       F*-constraints and G*-constraints
 %--------------------------------------------------------------------------
 
-% use GPU?
-GPU = isa(K, 'gpuArray');
-if GPU
-    data_type = 'gpuArray';
-else
-    data_type = 'double';
-end
-
 % set standard parameters
 if nargin < 10, tol = 1e-3; end
 if nargin < 9, maxIter = 300; end
@@ -84,7 +76,7 @@ Kt = K';
 i = 0;
 
 % track numerical primal-dual gap
-GAP = zeros(maxIter + 1, 1, data_type);
+GAP = zeros(maxIter + 1, 1);
 
 % initialize iteration variables
 y_current = y0;
@@ -92,26 +84,26 @@ x_current = x0;
 x_bar = x0;
 
 % record progress in primal, F and G ...
-F_con = zeros(maxIter + 1, 1, data_type);
-G_con = zeros(maxIter + 1, 1, data_type);
+F_con = zeros(maxIter + 1, 1);
+G_con = zeros(maxIter + 1, 1);
 [F_history, G_history, F_con(1), G_con(1)] = primal_objective(x0);
-primal_history = zeros(maxIter + 1, 1, data_type);
+primal_history = zeros(maxIter + 1, 1);
 primal_history(1) = sum(G_history(1, :)) + sum(F_history(1, :));
-F_history = [F_history; zeros(maxIter, size(F_history, 2), data_type)];
-G_history = [G_history; zeros(maxIter, size(G_history, 2), data_type)];
+F_history = [F_history; zeros(maxIter, size(F_history, 2))];
+G_history = [G_history; zeros(maxIter, size(G_history, 2))];
 
 % ... as well for dual, F* and G*
-FS_con = zeros(maxIter + 1, 1, data_type);
-GS_con = zeros(maxIter + 1, 1, data_type);
+FS_con = zeros(maxIter + 1, 1);
+GS_con = zeros(maxIter + 1, 1);
 [FStar_history, GStar_history, FS_con(1), GS_con(1)] = ...
     dual_objective(y0);
-dual_history = zeros(maxIter + 1, 1, data_type);
+dual_history = zeros(maxIter + 1, 1);
 dual_history(1) = ...
     -(sum(GStar_history(1, :)) + sum(FStar_history(1, :)));
 FStar_history = [FStar_history; ...
-    zeros(maxIter, size(FStar_history, 2), data_type)];
+    zeros(maxIter, size(FStar_history, 2))];
 GStar_history = [GStar_history; ...
-    zeros(maxIter, size(GStar_history, 2), data_type)];
+    zeros(maxIter, size(GStar_history, 2))];
 
 % output some info
 fprintf('\nCHAMBOLLE POCK PRIMAL DUAL OPTIMIZATION SCHEME\n');
@@ -234,13 +226,6 @@ primal_history = ...
     [primal_history, F_history, G_history, F_con, G_con];
 dual_history = ...
     [dual_history, FStar_history, GStar_history, FS_con, GS_con];
-
-if GPU
-    x_star = gather(x_star);
-    y_star = gather(y_star);
-    primal_history = gather(primal_history);
-    dual_history = gather(dual_history);
-end
 
 %-------------------------------------------------------------------------%
 % nested functions for primal and dual objective
