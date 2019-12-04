@@ -15,7 +15,7 @@ clear all, close all, clc;
 exp_begin();
 
 % choose dataset from {synthetic, heart}
-dataset = 'synthetic';
+dataset = 'heart';
 
 switch dataset
     case 'synthetic'
@@ -68,9 +68,9 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 9e-2;
+        optPara.mu = 6.5e-2;
         optPara.bc = 'neumann';
-        optPara.doPlots = true;
+        optPara.doPlots = false;
 
     otherwise
         
