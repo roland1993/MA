@@ -26,6 +26,32 @@ data_path = sprintf('../Data/ChallengingSequences/%s/sequence', data_set);
 
 switch data_set
     
+    case 'RainFlares'
+        % load + downsample images
+        IDX = 17 : 26;
+        k = numel(IDX);
+        img = cell(1, k);
+        factor = 2;
+        for i = 1 : k
+            img{i} = normalize(double( ...
+                sub_imread(sprintf('%s/%06d_1.pgm', data_path, IDX(i)))));
+            img{i} = conv2(img{i}, ones(factor) / factor ^ 2, 'same');
+            img{i} = img{i}(1 : factor : end, 1 : factor : end);
+        end
+        
+        % optimization parameters
+        optPara.theta = 1;
+        optPara.maxIter = 2000;
+        optPara.tol = 1e-3;
+        optPara.outerIter = [16 2];
+        optPara.mu = 4.5e-2;
+        optPara.nu_factor = [0.91 0.91];
+        optPara.bc = 'neumann';
+        optPara.doPlots = false;
+        
+        % select reference
+        ref_idx = 21 - IDX(1) + 1;
+    
     case 'FlyingSnow'
         
         % load + downsample images
@@ -45,8 +71,8 @@ switch data_set
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 7.5e-2;
-        optPara.nu_factor = [0.95 0.95];
+        optPara.mu = 4.5e-2;
+        optPara.nu_factor = [0.91 0.91];
         optPara.bc = 'neumann';
         optPara.doPlots = false;
         
@@ -56,7 +82,7 @@ switch data_set
     case 'ShadowOnTruck'
         
         % load + downsample images
-        IDX = 9 : 18;
+        IDX = 0 : 30;
         k = numel(IDX);
         img = cell(1, k);
         factor = 2;
@@ -72,7 +98,7 @@ switch data_set
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 5e-2;
+        optPara.mu = 4.5e-2;
         optPara.nu_factor = [0.95 0.95];
         optPara.bc = 'neumann';
         optPara.doPlots = false;
@@ -100,7 +126,7 @@ switch data_set
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
         optPara.mu = 7.5e-2;
-        optPara.nu_factor = [0.975 0.975];
+        optPara.nu_factor = [0.91 0.91];
         optPara.bc = 'neumann';
         optPara.doPlots = false;
         
@@ -110,7 +136,7 @@ switch data_set
     case 'WetAutobahn'
         
         % load + downsample images
-        IDX = 16 : 25;
+        IDX = 17 : 26;
         k = numel(IDX);
         img = cell(1, k);
         factor = 2;
@@ -126,7 +152,7 @@ switch data_set
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 7.5e-2;
+        optPara.mu = 5e-2;
         optPara.nu_factor = [0.95 0.95];
         optPara.bc = 'neumann';
         optPara.doPlots = false;
@@ -176,24 +202,26 @@ while true
         waitforbuttonpress;
     end
 end
-
-% optical flow visualization
-for i = 1 : k
-    of{i} = flow_visualization(...
-        reshape(uStar(:, 1, i), size(img{1})), ...
-        reshape(uStar(:, 2, i), size(img{1})));
-    overlay{i} = createOverlayImage(img{i}, of{i});
-end
-
-figure;
-while true
-    for i = 1 : k
-        subplot(1, 2, 1);
-        imshow(of{i}, 'InitialMagnification', 'fit');
-        title(sprintf('optical flow #%d', i));
-        subplot(1, 2, 2);
-        imshow(overlay{i}, 'InitialMagnification', 'fit');
-        title(sprintf('overlay #%d', i));
-        waitforbuttonpress;
-    end
-end
+% 
+% % optical flow visualization
+% for i = 1 : k
+%     of{i} = flow_visualization(...
+%         reshape(uStar(:, 1, i), size(img{1})), ...
+%         reshape(uStar(:, 2, i), size(img{1})));
+%     overlay{i} = createOverlayImage(img{i}, of{i});
+% end
+% 
+% figure;
+% while true
+%     for i = 1 : k
+%         subplot(1, 3, 1);
+%         imshow(of{i}, 'InitialMagnification', 'fit');
+%         title(sprintf('optical flow #%d', i));
+%         subplot(1, 3, 2);
+%         imshow(overlay{i}, 'InitialMagnification', 'fit');
+%         title(sprintf('overlay #%d', i));
+%         subplot(1, 3, 3);
+%         plotflow(reshape(uStar(:, :, i), [size(img{1}), 2]))
+%         waitforbuttonpress;
+%     end
+% end
