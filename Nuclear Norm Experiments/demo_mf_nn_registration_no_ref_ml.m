@@ -12,8 +12,8 @@
 % demo script for mf_nn_registration_no_ref_ml.m
 clear all, close all, clc;
 
-%
-exp_begin();
+% %
+% exp_begin();
 
 % choose dataset from {synthetic, heart}
 dataset = 'synthetic';
@@ -111,9 +111,9 @@ end
 LM_acc = landmark_accuracy(LM);
 LM_transformed_acc = landmark_accuracy(LM_transformed);
 
-%
-exp_save('data');
-exp_end();
+% %
+% exp_save('data');
+% exp_end();
 
 % input, output and low rank components in comparison
 figure;

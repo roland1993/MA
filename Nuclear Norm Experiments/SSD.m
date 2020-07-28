@@ -11,7 +11,7 @@ function [res1, res2, res3] = SSD(x, g, lambda, tau, conjugate_flag)
 %--------------------------------------------------------------------------
 % IN:
 %       x               ~ m*n*numImg x 1    input variables
-%       g               ~ m*n*numImg x 1    g in SSD(x) = 0.5||x - g||_2^2
+%       g               ~ m*n*numImg x 1    g in 0.5*lambda*||x - g||_2^2
 %       lambda          ~ 1 x 1             weighting parameter
 %       tau             ~ 1 x 1             prox step size
 %       conjugate_flag  ~ logical           evaluate conjugate?
