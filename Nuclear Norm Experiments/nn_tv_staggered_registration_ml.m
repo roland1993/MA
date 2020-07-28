@@ -5,7 +5,7 @@
 %
 %   MEAN-FREE & NO REFERENCE & USES UNIQUENESS-TERM
 
-function [u, L, SV_history] = mf_nn_registration_no_ref_ml(img, optPara)
+function [u0, L0, SV_history] = nn_tv_staggered_registration_ml(img, optPara)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -84,6 +84,11 @@ for lev = 1 : numLevels
     % get image resolution at current level
     [m, n] = size(ML{lev, 1});
     
+    %
+    sz_cc = m * n;
+    sz_stg_x = (m + 1) * n;
+    sz_stg_y = m * (n + 1);
+    
     % image region
     h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
     
@@ -91,7 +96,6 @@ for lev = 1 : numLevels
     theta = optPara.theta;
     tol = optPara.tol;
     mu = optPara.mu;
-    bc = optPara.bc;
     doPlots = optPara.doPlots;
     maxIter = optPara.maxIter;
     if lev == 1
@@ -104,28 +108,45 @@ for lev = 1 : numLevels
     
     % initialize primal and dual variables (x and p)
     if lev == 1
-        x = zeros(3 * k * m * n, 1);
+        % x = zeros(3 * k * m * n, 1);
+        x = zeros(k * (sz_stg_x + sz_stg_y + sz_cc), 1);
     else
         
         % get resolution from last level
         [m_low_res, n_low_res] = size(ML{lev - 1, 1});
         
+        sz_stg_low_res = (m_low_res + 1) * n_low_res + ...
+            m_low_res * (n_low_res + 1);
+        
         % prolongation of primal variables to higher resolution
-        x_high_res = zeros(2 * m_low_res, 2 * n_low_res, 3 * k);
-        x_low_res = reshape(x, m_low_res, n_low_res, 3 * k);
-        for i = 1 : (3 * k)
-            x_high_res(:, :, i) = kron(x_low_res(:, :, i), ones(2));
-        end
-        x = vec(x_high_res(1 : m, 1 : n, :));
+        u_low_res = reshape(x(1 : k * sz_stg_low_res), [], k);
+        L_low_res = reshape(x(k * sz_stg_low_res + 1 : end), [], k);
+
+        P_stg = blkdiag(staggered_prolongation(m_low_res, n_low_res, 1), ...
+            staggered_prolongation(m_low_res, n_low_res, 2));
+        P_cc = cc_prolongation(m_low_res, n_low_res);
+        
+        u_high_res = P_stg * u_low_res;
+        L_high_res = P_cc * L_low_res;
+        
+        x = [vec(u_high_res); vec(L_high_res)];
+        
+%         x_high_res = zeros(2 * m_low_res, 2 * n_low_res, 3 * k);
+%         x_low_res = reshape(x, m_low_res, n_low_res, 3 * k);
+%         for i = 1 : (3 * k)
+%             x_high_res(:, :, i) = kron(x_low_res(:, :, i), ones(2));
+%         end
+%         x = vec(x_high_res(1 : m, 1 : n, :));
         
     end
     p = zeros(6 * k * m * n, 1);
     
     % gradient operator for displacement fields
-    A2 = finite_difference_operator(m, n, h_grid, k, bc);
+%     A2 = finite_difference_operator(m, n, h_grid, k, bc);
+    A2 = kron(speye(2 * k), finite_differences_staggered(m, n, h_grid));
     
     % all zeros
-    A3 = sparse(k * m * n, 2 * k * m * n);
+    A3 = sparse(k * m * n, k * (sz_stg_x + sz_stg_y));
     
     % identity matrix
     A4 = speye(k * m * n);
@@ -147,7 +168,10 @@ for lev = 1 : numLevels
     end
     
     % initialize displacement field u0
-    u0 = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
+    stg_2_cc = blkdiag(stg_to_cc(m, n, 1), stg_to_cc(m, n, 2));
+    stg_2_cc = kron(speye(k), stg_2_cc);
+    u0 = stg_2_cc * x(1 : k * (sz_stg_x + sz_stg_y));
+    u0 = reshape(u0, [sz_cc, 2, k]);
     
     % initialize storage for singular values
     SV_history{lev} = zeros(k, max(outerIter));
@@ -180,7 +204,7 @@ for lev = 1 : numLevels
         end
         
         % upper left block of A ~> image gradients
-        A1 = -blkdiag(dT{:});
+        A1 = -blkdiag(dT{:}) * stg_2_cc;
         
         % build up A from the computed blocks
         A = [       A1,     A4
@@ -203,15 +227,12 @@ for lev = 1 : numLevels
             F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
         
         % get displacements and low rank components from minimizer x
-        u0 = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
-        L0 = x(2 * k * m * n + 1 : end);
-        
-        % store results
-        u{lev, o} = u0;
-        L{lev, o} = reshape(L0, m, n, k);
+        u0 = reshape(stg_2_cc * x(1 : k * (sz_stg_x + sz_stg_y)), ...
+            [sz_cc, 2, k]);
+        L0 = reshape(x(k * (sz_stg_x + sz_stg_y) + 1 : end), [m n k]);
         
         % store info on development of singular values
-        [~, S, ~] = svd(reshape(A6 * L0, m * n, k), 'econ');
+        [~, S, ~] = svd(reshape(A6 * L0(:), m * n, k), 'econ');
         SV_history{lev}(:, o) = diag(S);
         
         % plot progress (if requested)
@@ -219,7 +240,7 @@ for lev = 1 : numLevels
             plot_progress(fh1, primal_history, dual_history);
             set(fh1, 'NumberTitle', 'off', ...
                 'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
-            display_results(ML(lev, :), u0, [], L{lev, o}, fh2);
+            display_results(ML(lev, :), u0, [], L0, fh2);
             plot_sv(fh3, SV_history{lev}(:, 1 : o));
             drawnow;
         end
@@ -260,7 +281,7 @@ end
             % apply mu * ||.||_{2,1} to each of the k components y2_i
             y2 = reshape(y2, 4 * mn, k);
             for j = 1 : k
-                [~, ~, res3_F2] = ... % norm21(y2(:, j), mu * prod(h_grid), sigma, conjugate_flag);
+                [~, ~, res3_F2] = ...
                     pointwise_2x2_nn(y2(:, j), mu * prod(h_grid), sigma, conjugate_flag);
                 res3(k * mn + (j - 1) * 4 * mn + 1 : ...
                         k * mn + j * 4 * mn) = res3_F2;
@@ -286,7 +307,7 @@ end
             res1_F2 = 0;
             res2_F2 = 0;
             for j = 1 : k
-                [res1_F2_i, res2_F2_i] = ... norm21(y2(:, j), mu * prod(h_grid), sigma, conjugate_flag);
+                [res1_F2_i, res2_F2_i] = ...
                     pointwise_2x2_nn(y2(:, j), mu * prod(h_grid), sigma, conjugate_flag);
                 res1_F2 = res1_F2 + res1_F2_i;
                 res2_F2 = max(res2_F2, res2_F2_i);
@@ -307,16 +328,17 @@ end
     function [res1, res2, res3] = G(x, s, conjugate_flag)
         
         % s = [m, n, k]
+        sz_stg = (s(1) + 1) * s(2) + s(1) * (s(2) + 1);
         
         % split x = [x_u, x_l]
-        x_u = x(1 : 2 * prod(s));
-        x_l = x(2 * prod(s) + 1 : end);
+        x_u = x(1 : s(3) * sz_stg);
+        x_l = x(s(3) * sz_stg + 1 : end);
         
         if nargout == 3
             
             % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
             [~, ~, res3_G1] = ...
-                mean_zero_indicator(x_u, s, conjugate_flag);
+                mean_zero_indicator_stg(x_u, s, conjugate_flag);
             
             % apply zero-function to x_l
             [~, ~, res3_G2] = zero_function(x_l, conjugate_flag);
@@ -332,7 +354,7 @@ end
             
             % apply delta_{mean(u_x) = 0, mean(u_y) = 0} to x_u
             [res1_G1, res2_G1] = ...
-                mean_zero_indicator(x_u, s, conjugate_flag);
+                mean_zero_indicator_stg(x_u, s, conjugate_flag);
             
             % apply zero-function to x_l
             [res1_G2, res2_G2] = zero_function(x_l, conjugate_flag);
