@@ -12,13 +12,11 @@
 % demo script for mf_nn_registration_no_ref_ml.m
 clear all, close all, clc;
 
-%
-exp_begin();
-
-% choose dataset from {synthetic, heart}
-dataset = 'synthetic';
+% choose dataset from {synthetic, heart, kidney}
+dataset = 'kidney';
 
 switch dataset
+    
     case 'synthetic'
         
         % generate data
@@ -70,18 +68,38 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 1.25e-1;
+        optPara.mu = 1e-1;
         optPara.nu_factor = [0.95 0.95];
         optPara.bc = 'neumann';
         optPara.doPlots = false;
+        
+    case 'kidney'
+        
+        load('dcemri_kidney.mat');
+        k = size(data, 3);
+        m = size(data, 1);
+        n = size(data, 2);
+        omega = [0, m, 0, n];
+        
+        img = cell(k, 1);
+        for i = 1 : k
+            img{i} = data(:, :, i);
+            LM{i} = [m n] .* LM{i}';
+        end
+        
+        optPara.theta = 1;
+        optPara.maxIter = 2000;
+        optPara.tol = 5e-3;
+        optPara.outerIter = [16 2];
+        optPara.mu = 0.75e-1;
+        optPara.nu_factor = [0.925 0.925];
+        optPara.bc = 'neumann';
+        optPara.doPlots = true;
         
     otherwise
         error('No such dataset!');
         
 end
-
-% save name of method for later
-method = mfilename;
 
 % call registration routine
 tic;
@@ -94,26 +112,30 @@ LStar = L{end, optPara.outerIter(2)};
 
 % evaluate results
 img_u = cell(k, 1);
-LM_transformed = cell(k, 1);
 
+LM_available = exist('LM', 'var');
+if LM_available
+    LM_transformed = cell(k, 1);
+end
+    
 for i = 1 : k
     
     % get transformed images
     img_u{i} = evaluate_displacement(img{i}, [1, 1], uStar(:, :, i));
     
     % transform landmarks
-    LM_transformed{i} = ...
-        landmark_transform(LM{i}, reshape(uStar(:, :, i), [m n 2]), omega);
-    
+    if LM_available
+        LM_transformed{i} = ...
+            landmark_transform(LM{i}, reshape(uStar(:, :, i), [m n 2]), omega);
+    end
+        
 end
 
 % landmark accuracy in terms of mean distance to mean lm position
-LM_acc = landmark_accuracy(LM);
-LM_transformed_acc = landmark_accuracy(LM_transformed);
-
-%
-exp_save('data');
-exp_end();
+if LM_available
+    LM_acc = landmark_accuracy(LM);
+    LM_transformed_acc = landmark_accuracy(LM_transformed);
+end
 
 % input, output and low rank components in comparison
 figure;
@@ -124,17 +146,21 @@ while true
         
         subplot(1, 3, 1);
         imshow(img{i}, [], 'InitialMagnification', 'fit');
-        hold on
-        scatter(LM{i}(:, 2), LM{i}(:, 1), 'bo', 'MarkerFaceColor', 'red');
-        hold off
+        if LM_available
+            hold on
+            scatter(LM{i}(:, 2), LM{i}(:, 1), 'bo', 'MarkerFaceColor', 'red');
+            hold off
+        end
         title(sprintf('input T_{%d}', i));
         
         subplot(1, 3, 2);
         imshow(img_u{i}, [], 'InitialMagnification', 'fit');
-        hold on
-        scatter(LM_transformed{i}(:, 2), LM_transformed{i}(:, 1), ...
-            'bo', 'MarkerFaceColor', 'red');
-        hold off
+        if LM_available
+            hold on
+            scatter(LM_transformed{i}(:, 2), LM_transformed{i}(:, 1), ...
+                'bo', 'MarkerFaceColor', 'red');
+            hold off
+        end
         title(sprintf('output T_{%d}(u_{%d})', i, i));
         
         subplot(1, 3, 3);
