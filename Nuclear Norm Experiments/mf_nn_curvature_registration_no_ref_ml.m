@@ -264,7 +264,7 @@ end
             % apply delta_{|| . ||_* <= nu} to y3
             [~, ~, res3_F3] = nuclear_norm_constraint( ...
                 y3, k, sigma, nu, conjugate_flag);
-            res3(5 * k * mn + 1 : end) = res3_F3;
+            res3(3 * k * mn + 1 : end) = res3_F3;
             
             % dummy outputs
             res1 = [];
