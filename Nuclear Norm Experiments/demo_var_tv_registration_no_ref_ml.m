@@ -12,8 +12,6 @@
 % demo script for var_tv_registration_no_ref_ml.m
 clear all, close all, clc;
 
-exp_begin();
-
 % choose dataset from {synthetic, heart}
 dataset = 'heart';
 
@@ -86,9 +84,6 @@ tic;
 u = var_tv_registration_no_ref_ml(img, optPara);
 toc;
 
-exp_end();
-exp_save('data');
-
 % fetch results
 uStar = u{end, optPara.outerIter(2)};
 
@@ -110,10 +105,6 @@ end
 % landmark accuracy in terms of mean distance to mean lm position
 LM_acc = landmark_accuracy(LM);
 LM_transformed_acc = landmark_accuracy(LM_transformed);
-
-%
-exp_save('data');
-exp_end();
 
 % input, output and low rank components in comparison
 figure;
