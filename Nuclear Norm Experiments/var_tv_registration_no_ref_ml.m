@@ -1,10 +1,10 @@
-%   0.5 * || T_i(u_i) - T_bar ||_2^2
+%   0.5 * sum_i || T_i(u_i) - T_bar ||
 %       + sum_i mu * TV(u_i)
 %       + delta_{mean(u_x) = 0, mean(u_y) = 0}
 %
 %   VARIANCE DATA-TERM & NO REFERENCE & USES UNIQUENESS-TERM
 
-function u = var_registration_no_ref(img, optPara)
+function u = var_tv_registration_no_ref_ml(img, optPara)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -28,10 +28,8 @@ function u = var_registration_no_ref(img, optPara)
 %       .doPlots    ~ logical   do plots during optimization?
 %
 % OUT:                                      PER OUTER ITERATE:
-%   u               ~ cell(outerIter, 1)        displacement fields
-%   L               ~ cell(outerIter, 1)        low rank components
-%   primal_history  ~ cell(outerIter, 1)        primal iteration history
-%   dual_history    ~ cell(outerIter, 1)        dual iteration history
+%   u0              ~ cell(outerIter, 1)        displacement fields
+%   L0              ~ cell(outerIter, 1)        low rank components
 %--------------------------------------------------------------------------
 
 % make sure that interpolation routines are on search path
@@ -47,115 +45,164 @@ normalize = @(x) (x - min(x(:))) / (max(x(:)) - min(x(:)));
 k = length(img);
 
 % normalize images to range [0, 1]
-for i = 1 : k, img{i} = normalize(img{i}); end
+for i = 1 : k
+    img{i} = normalize(img{i});
+end
 
 % get image resolution etc.
 [m, n] = size(img{1});
-h_img = [1, 1];
 omega = [0, m, 0, n];
-h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
 
-% set optimization parameters
-theta = optPara.theta;
-maxIter = optPara.maxIter;
-tol = optPara.tol;
-outerIter = optPara.outerIter;
-mu = optPara.mu;
-bc = optPara.bc;
-doPlots = optPara.doPlots;
+%-------BEGIN MULTI LEVEL-------------------------------------------------%
+% resolution at lowest level: m, n >= 2 ^ 5
+numLevels = min(floor(log2([m, n]) - 5)) + 1;
 
-% initialize outputs
-u = cell(outerIter, 1);
+% initialize output
+u = cell(numLevels, max(optPara.outerIter));
 
-% initialize primal and dual variables
-x = zeros(2 * k * m * n, 1);
-p = zeros(5 * k * m * n, 1);
-
-% gradient operator for displacement fields
-A2 = finite_difference_operator(m, n, h_grid, k, bc);
-
-% mean free operator
-K = mean_free_operator(m, n, k);
-
-% set function handle to G-part of target function
-% G_handle = @(x, c_flag) G(x, [m, n, k], c_flag);
-G_handle = @(x, c_flag) mean_zero_indicator(x, [m, n, k], c_flag);
-
-% if plotting was requested -> create figure (handle)
-if doPlots
-    fh1 = figure;
-    fh2 = figure;
+% get multi-level representation
+ML = cell(numLevels, k);
+for i = 1 : k
+    
+    % highest level = input
+    ML{numLevels, i} = img{i};
+    
+    % downsampling
+    for lev = (numLevels - 1) : (-1) : 1
+        ML{lev, i} = conv2(ML{lev + 1, i}, 0.25 * ones(2), 'same');
+        ML{lev, i} = ML{lev, i}(1 : 2 : end, 1 : 2 : end);
+    end
+    
 end
 
-%--------------OUTER ITERATION--------------------------------------------%
-for o = 1 : outerIter
+% iterate over levels
+for lev = 1 : numLevels
     
-    % use computed u as u0 for new iterate
-    if o == 1
-        u0 = zeros(m * n, 2, k);
+    % get image resolution at current level
+    [m, n] = size(ML{lev, 1});
+    
+    % compute grid steps
+    h_grid = (omega([2, 4]) - omega([1, 3])) ./ [m, n];
+    
+    % set optimization parameters
+    theta = optPara.theta;
+    tol = optPara.tol;
+    mu = optPara.mu;
+    bc = optPara.bc;
+    doPlots = optPara.doPlots;
+    maxIter = optPara.maxIter;
+    if lev == 1
+        outerIter = optPara.outerIter(1);
     else
-        u0 = u{o - 1};
+        outerIter = optPara.outerIter(2);
     end
     
-    % reference vector for computing SSD from L
-    b = zeros(k * m * n, 1);
+    % initialize primal and dual variables (x and p)
+    if lev == 1
+        x = zeros(2 * k * m * n, 1);
+    else
+        
+        % get resolution from last level
+        [m_low_res, n_low_res] = size(ML{lev - 1, 1});
+        
+        % prolongation of primal variables to higher resolution
+        x_high_res = zeros(2 * m_low_res, 2 * n_low_res, 2 * k);
+        x_low_res = reshape(x, m_low_res, n_low_res, 2 * k);
+        for i = 1 : (2 * k)
+            x_high_res(:, :, i) = 2 * kron(x_low_res(:, :, i), ones(2));
+        end
+        x = vec(x_high_res(1 : m, 1 : n, :));
+        
+    end
+    p = zeros(5 * k * m * n, 1);
     
-    % templates evaluated using current u0
-    T_u = zeros(m, n, k);
-    dT = cell(k, 1);
-    for i = 1 : k
-        [T_u(:, :, i), dT{i}] = evaluate_displacement( ...
-            img{i}, h_img, u0(:, :, i));
-        b((i - 1) * m * n + 1 : i * m * n) = ...
-            vec(T_u(:, :, i)) - dT{i} * vec(u0(:, :, i));
+    % gradient operator for displacement fields
+    A2 = finite_difference_operator(m, n, h_grid, k, bc);
+    
+    % mean free operator
+    K = mean_free_operator(m, n, k);
+    
+    % set function handle to G-part of target function
+    G_handle = @(x, c_flag) mean_zero_indicator(x, [m, n, k], c_flag);
+    
+    % if plotting was requested -> create figures (+ handles)
+    if doPlots && (lev == 1)
+        fh1 = figure;
+        fh2 = figure;
     end
     
-    % centering of b
-    b = K * b;
-    
-    % upper left block of A ~> template image gradients (centered)
-    A1 = K * blkdiag(dT{:});
-    
-    % build up A from the computed blocks
-    A = [       A1
-                A2       ];
-    
-    % estimate spectral norm of A
-    e = matrix_norm(A);
-    norm_A_est = e(end);
-    
-    % use estimated norm to get primal and dual step sizes
-    tau = sqrt(0.99 / norm_A_est ^ 2);
-    sigma = sqrt(0.99 / norm_A_est ^ 2);
-    
-    % get function handle to F-part of target function
-    F_handle = @(y, c_flag) F(y, (-b), k, mu, sigma, c_flag);
-    
-    % perform optimization
-    [x, p, primal_history, dual_history] = chambolle_pock( ...
-        F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
-    
-    % get displacements from (primal) minimizer x
-    u{o} = reshape(x, m * n, 2, k);
-    
-    % plot progress
-    if doPlots
-        plot_progress(fh1, primal_history, dual_history);
-        set(fh1, 'NumberTitle', 'off', ...
-            'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
-        display_results(img, u{o}, [], [], fh2);
-        drawnow;
-    end
+    % initialize displacement field u0
+    u0 = reshape(x, m * n, 2, k);
 
+    %-------BEGIN OUTER ITERATION-----------------------------------------%
+    for o = 1 : outerIter
+        
+        % reference vector for computing SSD from L
+        b = zeros(k * m * n, 1);
+        
+        % templates evaluated using current u0
+        T_u = zeros(m, n, k);
+        dT = cell(k, 1);
+        for i = 1 : k
+            [T_u(:, :, i), dT{i}] = evaluate_displacement( ...
+                ML{lev, i}, h_grid, u0(:, :, i));
+            b((i - 1) * m * n + 1 : i * m * n) = ...
+                vec(T_u(:, :, i)) - dT{i} * vec(u0(:, :, i));
+        end
+        
+        % centering of b
+        b = K * b;
+        
+        % upper left block of A ~> template image gradients (centered)
+        A1 = K * blkdiag(dT{:});
+        
+        % build up A from the computed blocks
+        A = [   A1
+                A2  ];
+        
+        % estimate spectral norm of A
+        e = matrix_norm(A);
+        norm_A_est = e(end);
+        
+        % use estimated norm to get primal and dual step sizes
+        tau = sqrt(0.99 / norm_A_est ^ 2);
+        sigma = sqrt(0.99 / norm_A_est ^ 2);
+        
+        % get function handle to F-part of target function
+        F_handle = @(y, c_flag) F(y, (-b), k, h_grid, mu, sigma, c_flag);
+        
+        % perform optimization
+        [x, p, primal_history, dual_history] = chambolle_pock( ...
+            F_handle, G_handle, A, x, p, theta, tau, sigma, maxIter, tol);
+        
+        % get displacements from minimizer x
+        u0 = reshape(x, m * n, 2, k);
+        
+        % store results
+        u{lev, o} = u0;
+        
+        % plot progress (if requested)
+        if doPlots
+            plot_progress(fh1, primal_history, dual_history);
+            set(fh1, 'NumberTitle', 'off', ...
+                'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
+            display_results(ML(lev, :), u0, [], [], fh2);
+            drawnow;
+        end
+
+    end
+    %-------END OUTER ITERATION-------------------------------------------%
+    
 end
-%-------------------------------------------------------------------------%
+%-------END MULTI LEVEL---------------------------------------------------%
 
-%-------LOCAL FUNCTION DEFINITIONS----------------------------------------%
+
+%-------BEGIN LOCAL FUNCTION DEFINITIONS----------------------------------%
     function [res1, res2, res3] = ...
-            F(y, b, k, mu, sigma, conjugate_flag)
+            F(y, b, k, h_grid, mu, sigma, conjugate_flag)
         % splits input y = [y1; y2] and computes
-        %   F_1(y1) = 0.5*|| y1 - b ||_2^2
-        %   F_2(y2) = sum_i mu * || y2_i ||_{2,1}
+        %   F_1(y1) = 0.5 * h1 * h2 * || y1 - b ||_2^2
+        %   F_2(y2) = mu * sum_i h1 * h2 * || y2_i ||_{2,1}
         
         % get number of template images and number of pixels per image
         mn = numel(y) / (5 * k);
@@ -169,15 +216,16 @@ end
             % initialize output
             res3 = zeros(5 * k * mn, 1);
             
-            % apply SAD to y1-part
-            [~, ~, res3_F1] = SSD(y1, b, sigma, 1, conjugate_flag);
+            % apply SSD to y1-part
+            [~, ~, res3_F1] = ...
+                SSD(y1, b, prod(h_grid), sigma, conjugate_flag);
             res3(1 : k * mn) = res3_F1;
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i
             y2 = reshape(y2, 4 * mn, k);
             for j = 1 : k
-                [~, ~, res3_F2] = ...
-                    norm21(y2(:, j), mu, sigma, conjugate_flag);
+                [~, ~, res3_F2] = norm21(y2(:, j), ...
+                    mu * prod(h_grid), sigma, conjugate_flag);
                 res3(k * mn + (j - 1) * 4 * mn + 1 : ...
                         k * mn + j * 4 * mn) = res3_F2;
             end
@@ -188,16 +236,17 @@ end
             
         else
             
-            % apply F1 = SAD to y1-part
-            [res1_F1, res2_F1] = SSD(y1, b, 1, sigma, conjugate_flag);
+            % apply F1 = SSD to y1-part
+            [res1_F1, res2_F1] = ...
+                SSD(y1, b, prod(h_grid), sigma, conjugate_flag);
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i
             y2 = reshape(y2, 4 * mn, k);
             res1_F2 = 0;
             res2_F2 = 0;
             for j = 1 : k
-                [res1_F2_i, res2_F2_i] = ...
-                    norm21(y2(:, j), mu, sigma, conjugate_flag);
+                [res1_F2_i, res2_F2_i] = norm21(y2(:, j), ...
+                    mu * prod(h_grid), sigma, conjugate_flag);
                 res1_F2 = res1_F2 + res1_F2_i;
                 res2_F2 = max(res2_F2, res2_F2_i);
             end

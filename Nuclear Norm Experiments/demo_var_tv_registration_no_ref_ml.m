@@ -9,14 +9,11 @@
 %           MIT Open Source License
 %--------------------------------------------------------------------------
 
-% demo script for mf_nn_registration_no_ref_ml.m
+% demo script for var_tv_registration_no_ref_ml.m
 clear all, close all, clc;
 
-% %
-% exp_begin();
-
 % choose dataset from {synthetic, heart}
-dataset = 'synthetic';
+dataset = 'heart';
 
 switch dataset
     case 'synthetic'
@@ -37,14 +34,13 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 2e-1;
-        optPara.nu_factor = [0.9 0.9];
+        optPara.mu = 1e-1;
         optPara.bc = 'neumann';
         optPara.doPlots = false;
         
     case 'heart'
         
-        % load data
+         % load data
         load('heart_mri.mat');
         k = length(IDX);
         
@@ -70,12 +66,12 @@ switch dataset
         optPara.maxIter = 2000;
         optPara.tol = 1e-3;
         optPara.outerIter = [16 2];
-        optPara.mu = 1.25e-1;
-        optPara.nu_factor = [0.95 0.95];
+        optPara.mu = 6.5e-2;
         optPara.bc = 'neumann';
         optPara.doPlots = false;
-        
+
     otherwise
+        
         error('No such dataset!');
         
 end
@@ -85,12 +81,11 @@ method = mfilename;
 
 % call registration routine
 tic;
-[u, L, SV_history] = mf_nn_registration_no_ref_ml(img, optPara);
+u = var_tv_registration_no_ref_ml(img, optPara);
 toc;
 
 % fetch results
 uStar = u{end, optPara.outerIter(2)};
-LStar = L{end, optPara.outerIter(2)};
 
 % evaluate results
 img_u = cell(k, 1);
@@ -111,10 +106,6 @@ end
 LM_acc = landmark_accuracy(LM);
 LM_transformed_acc = landmark_accuracy(LM_transformed);
 
-% %
-% exp_save('data');
-% exp_end();
-
 % input, output and low rank components in comparison
 figure;
 colormap gray(256);
@@ -122,24 +113,19 @@ colormap gray(256);
 while true
     for i = 1 : k
         
-        subplot(1, 3, 1);
+        subplot(1, 2, 1);
         imshow(img{i}, [], 'InitialMagnification', 'fit');
         hold on
-        scatter(LM{i}(:, 2), LM{i}(:, 1), 'bo', 'MarkerFaceColor', 'red');
+        scatter(LM{i}(:, 2), LM{i}(:, 1));
         hold off
         title(sprintf('input T_{%d}', i));
         
-        subplot(1, 3, 2);
+        subplot(1, 2, 2);
         imshow(img_u{i}, [], 'InitialMagnification', 'fit');
         hold on
-        scatter(LM_transformed{i}(:, 2), LM_transformed{i}(:, 1), ...
-            'bo', 'MarkerFaceColor', 'red');
+        scatter(LM_transformed{i}(:, 2), LM_transformed{i}(:, 1));
         hold off
         title(sprintf('output T_{%d}(u_{%d})', i, i));
-        
-        subplot(1, 3, 3);
-        imshow(LStar(:, :, i), [], 'InitialMagnification', 'fit');
-        title(sprintf('output L_{%d}', i));
         
         waitforbuttonpress;
         

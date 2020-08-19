@@ -17,17 +17,15 @@ m = 100;    n = 100;    k = 8;
 data = dynamicTestImage(m, n, k);
 img = cell(k, 1);
 for i = 1 : k, img{i} = data(:, :, i); end
-% % try rotated version
-% for i = 1 : k, img{i} = imrotate(img{i}, 30, 'bilinear', 'crop'); end
+
 % set optimization parameters
 optPara.theta = 1;
 optPara.maxIter = 2000;
 optPara.tol = 1e-3;
-optPara.outerIter = 1;
+optPara.outerIter = 20;
 optPara.mu = 1e-1;
-optPara.nu_factor = 0.9;
-optPara.bc = 'linear';
-optPara.doPlots = false;
+optPara.bc = 'neumann';
+optPara.doPlots = true;
 
 % % load data
 % load('heart_mri.mat');
@@ -54,35 +52,28 @@ optPara.doPlots = false;
 
 % call registration routine
 tic;
-[u, L] = mf_nn_registration_no_ref(img, optPara);
+u = var_tv_registration_no_ref(img, optPara);
 toc;
-% 
-% %% display results
-% 
+
+%% display results
+
 % % clean-up
 % close all;
-% 
-% % singular values
-% plot_sv(L);
-% 
-% % overview of all warped images
-% iter = 20;
-% img_u = display_results(img, u{iter}, [], L{iter});
-% 
-% % input, output and low rank components in comparison
-% figure;
-% colormap gray(256);
-% while true
-%     for i = 1 : k
-%         subplot(1, 3, 1);
-%         imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
-%         title(sprintf('input T_%d', i));
-%         subplot(1, 3, 2);
-%         imshow(img_u{i}, [0 1], 'InitialMagnification', 'fit');
-%         title(sprintf('output T_%d(u_%d)', i, i));
-%         subplot(1, 3, 3);
-%         imshow(L{iter}(:, :, i), [0 1], 'InitialMagnification', 'fit');
-%         title(sprintf('output L_%d', i));
-%         waitforbuttonpress;
-%     end
-% end
+
+% overview of all warped images
+img_u = display_results(img, u{optPara.outerIter}, [], []);
+
+% input, output and low rank components in comparison
+figure;
+colormap gray(256);
+while true
+    for i = 1 : k
+        subplot(1, 2, 1);
+        imshow(img{i}, [0 1], 'InitialMagnification', 'fit');
+        title(sprintf('input T_%d', i));
+        subplot(1, 2, 2);
+        imshow(img_u{i}, [0 1], 'InitialMagnification', 'fit');
+        title(sprintf('output T_%d(u_%d)', i, i));
+        waitforbuttonpress;
+    end
+end
