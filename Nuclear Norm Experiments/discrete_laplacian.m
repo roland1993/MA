@@ -1,4 +1,4 @@
-function L = discrete_laplacian(m, n, h_grid, k)
+function L = discrete_laplacian(m, n, h_grid, k, bc)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -14,6 +14,7 @@ function L = discrete_laplacian(m, n, h_grid, k)
 %   n       ~ 1 x 1                         number of columns
 %   h_grid  ~ 1 x 2                         grid spacing
 %   k       ~ 1 x 1                         number of grids
+%   bc      ~ string                        boundary condition
 % OUT:
 %   D       ~ sparse(2*k*m*n x 2*k*m*n)     discrete laplacian per grid
 %--------------------------------------------------------------------------
@@ -21,14 +22,25 @@ function L = discrete_laplacian(m, n, h_grid, k)
 % x-derivative
 e_x = ones(m, 1);
 D_xx = (1 / h_grid(1)) ^ 2 * spdiags([e_x, (-2) * e_x, e_x], -1 : 1, m, m);
-D_xx(1, 1) = (-1) / h_grid(1) ^ 2;
-D_xx(end, end) = (-1) / h_grid(1) ^ 2;
+if strcmp(bc, 'neumann')
+    D_xx(1, 1) = (-1) / h_grid(1) ^ 2;
+    D_xx(end, end) = (-1) / h_grid(1) ^ 2;
+elseif strcmp(bc, 'dirichlet')
+else
+    warning('Unknown boundary condition');
+end
+
 
 % y-derivative
 e_y = ones(n, 1);
 D_yy = (1 / h_grid(2)) ^ 2 * spdiags([e_y, (-2) * e_y, e_y], -1 : 1, n, n);
-D_yy(1, 1) = (-1) / h_grid(2) ^ 2;
-D_yy(end, end) = (-1) / h_grid(2) ^ 2;
+if strcmp(bc, 'neumann')
+    D_yy(1, 1) = (-1) / h_grid(2) ^ 2;
+    D_yy(end, end) = (-1) / h_grid(2) ^ 2;
+elseif strcmp(bc, 'dirichlet')
+else
+    warning('Unknown boundary condition');
+end
 
 % construct laplacian, extend to 2*k grids (one per coordinate direction)
 L = kron(speye(2 * k), kron(speye(n), D_xx) + kron(D_yy, speye(m)));

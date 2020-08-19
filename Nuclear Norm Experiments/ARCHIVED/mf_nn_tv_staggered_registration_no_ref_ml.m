@@ -5,7 +5,7 @@
 %
 %   MEAN-FREE & NO REFERENCE & USES UNIQUENESS-TERM
 
-function [u0, L0, SV_history] = nn_tv_staggered_registration_ml(img, optPara)
+function [u0, L0, SV_history] = mf_nn_tv_staggered_registration_no_ref_ml(img, optPara)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -275,7 +275,7 @@ end
             
             % apply SAD to y1-part
             [~, ~, res3_F1] = ...
-                SAD_weight(y1, b, prod(h_grid), sigma, conjugate_flag);
+                SAD(y1, b, prod(h_grid), sigma, conjugate_flag);
             res3(1 : k * mn) = res3_F1;
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i
@@ -300,7 +300,7 @@ end
             
             % apply F1 = SAD to y1-part
             [res1_F1, res2_F1] = ...
-                SAD_weight(y1, b, prod(h_grid), sigma, conjugate_flag);
+                SAD(y1, b, prod(h_grid), sigma, conjugate_flag);
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i
             y2 = reshape(y2, 4 * mn, k);

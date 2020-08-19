@@ -9,7 +9,7 @@
 %           MIT Open Source License
 %--------------------------------------------------------------------------
 
-% demo script for mf_nn_curvature_registration_no_ref_ml.m
+% demo script for var_curvature_registration_no_ref_ml.m
 clear all, close all, clc;
 
 %% choose dataset from {heart, kidney}

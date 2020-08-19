@@ -4,7 +4,7 @@
 %
 %   VARIANCE DATA-TERM & NO REFERENCE & USES UNIQUENESS-TERM
 
-function u = var_registration_no_ref(img, optPara)
+function u = var_tv_registration_no_ref(img, optPara)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -169,7 +169,7 @@ end
             % initialize output
             res3 = zeros(5 * k * mn, 1);
             
-            % apply SAD to y1-part
+            % apply SSD to y1-part
             [~, ~, res3_F1] = SSD(y1, b, sigma, 1, conjugate_flag);
             res3(1 : k * mn) = res3_F1;
             
@@ -188,7 +188,7 @@ end
             
         else
             
-            % apply F1 = SAD to y1-part
+            % apply F1 = SSD to y1-part
             [res1_F1, res2_F1] = SSD(y1, b, 1, sigma, conjugate_flag);
             
             % apply mu * ||.||_{2,1} to each of the k components y2_i

@@ -5,7 +5,7 @@
 %
 %   MEAN-FREE & NO REFERENCE & USES UNIQUENESS-TERM
 
-function [u, L, SV_history] = mf_nn_curvature_registration_no_ref_ml(img, optPara)
+function [u0, L0, SV_history] = mf_nn_curvature_registration_no_ref_ml(img, optPara)
 %--------------------------------------------------------------------------
 % This file is part of my master's thesis entitled
 %           'Low rank- and sparsity-based image registration'
@@ -58,8 +58,8 @@ omega = [0, m, 0, n];
 numLevels = min(floor(log2([m, n]) - 5)) + 1;
 
 % initialize output
-u = cell(numLevels, max(optPara.outerIter));
-L = cell(numLevels, max(optPara.outerIter));
+% u = cell(numLevels, max(optPara.outerIter));
+% L = cell(numLevels, max(optPara.outerIter));
 SV_history = cell(numLevels, 1);
 
 % get multi-level representation
@@ -90,6 +90,7 @@ for lev = 1 : numLevels
     theta = optPara.theta;
     tol = optPara.tol;
     mu = optPara.mu;
+    bc = optPara.bc;
     doPlots = optPara.doPlots;
     maxIter = optPara.maxIter;
     if lev == 1
@@ -120,7 +121,7 @@ for lev = 1 : numLevels
     p = zeros(4 * k * m * n, 1);
     
     % gradient operator for displacement fields
-    A2 = discrete_laplacian(m, n, h_grid, k);
+    A2 = discrete_laplacian(m, n, h_grid, k, bc);
     
     % all zeros
     A3 = sparse(k * m * n, 2 * k * m * n);
@@ -204,10 +205,6 @@ for lev = 1 : numLevels
         u0 = reshape(x(1 : 2 * k * m * n), m * n, 2, k);
         L0 = x(2 * k * m * n + 1 : end);
         
-        % store results
-        u{lev, o} = u0;
-        L{lev, o} = reshape(L0, m, n, k);
-        
         % store info on development of singular values
         [~, S, ~] = svd(reshape(A6 * L0, m * n, k), 'econ');
         SV_history{lev}(:, o) = diag(S);
@@ -217,7 +214,7 @@ for lev = 1 : numLevels
             plot_progress(fh1, primal_history, dual_history);
             set(fh1, 'NumberTitle', 'off', ...
                 'Name', sprintf('ITERATE %d OUT OF %d', o, outerIter));
-            display_results(ML(lev, :), u0, [], L{lev, o}, fh2);
+            display_results(ML(lev, :), u0, [], reshape(L0, m, n, k), fh2);
             plot_sv(fh3, SV_history{lev}(:, 1 : o));
             drawnow;
         end
@@ -252,7 +249,7 @@ end
             
             % apply SAD to y1-part
             [~, ~, res3_F1] = ...
-                SAD_weight(y1, b, prod(h_grid), sigma, conjugate_flag);
+                SAD(y1, b, prod(h_grid), sigma, conjugate_flag);
             res3(1 : k * mn) = res3_F1;
             
             % apply sum of squares to y2
@@ -274,7 +271,7 @@ end
             
             % apply F1 = SAD to y1-part
             [res1_F1, res2_F1] = ...
-                SAD_weight(y1, b, prod(h_grid), sigma, conjugate_flag);
+                SAD(y1, b, prod(h_grid), sigma, conjugate_flag);
             
             % apply sum of squares to y2
             g = sparse(2 * k * mn, 1);

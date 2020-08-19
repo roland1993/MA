@@ -9,7 +9,7 @@
 %           MIT Open Source License
 %--------------------------------------------------------------------------
 
-% demo script for mf_nn_registration_no_ref_ml.m
+% demo script for mf_nn_tv_registration_no_ref_ml.m
 clear all, close all, clc;
 
 % choose dataset from {synthetic, heart, kidney}
@@ -103,7 +103,7 @@ end
 
 % call registration routine
 tic;
-[u, L, SV_history] = mf_nn_registration_no_ref_ml(img, optPara);
+[u, L, SV_history] = mf_nn_tv_registration_no_ref_ml(img, optPara);
 toc;
 
 % fetch results
